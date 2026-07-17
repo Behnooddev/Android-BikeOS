@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- BLE permissions.
+         neverForLocation on BLUETOOTH_SCAN: BikeOS never derives physical
+         location from scan results, so on API 31+ we don't need the
+         ACCESS_FINE_LOCATION permission that scanning would otherwise imply.
+         ACCESS_FINE_LOCATION is still declared (maxSdkVersion 30) because
+         BLE scanning on API <31 requires it regardless. -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="30" />
+
+    <application
+        android:name=".BikeOSApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="BikeOS"
+        android:theme="@style/Theme.BikeOS"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BikeOS"
+            android:screenOrientation="landscape">
+            <!-- Landscape locked: BikeOS is a handlebar-mounted cockpit display -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

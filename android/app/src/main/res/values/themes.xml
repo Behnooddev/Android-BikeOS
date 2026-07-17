@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.BikeOS" parent="android:Theme.Material.NoActionBar" />
+</resources>
