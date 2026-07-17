@@ -1,5 +1,7 @@
 package com.voidroot.bikeos.presentation.dashboard.components
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
