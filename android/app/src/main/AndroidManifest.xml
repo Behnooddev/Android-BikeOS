@@ -18,7 +18,7 @@
     <application
         android:name=".BikeOSApplication"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher"
         android:label="BikeOS"
         android:theme="@style/Theme.BikeOS"
         android:supportsRtl="true">
