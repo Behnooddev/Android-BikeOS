@@ -1,5 +1,6 @@
 package com.voidroot.bikeos.presentation.dashboard.components
 
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
