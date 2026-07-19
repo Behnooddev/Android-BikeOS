@@ -5,6 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.voidroot.bikeos.presentation.clusterboot.ClusterBootScreen
 import com.voidroot.bikeos.presentation.dashboard.DashboardScreen
 import com.voidroot.bikeos.presentation.menu.about.AboutScreen
 import com.voidroot.bikeos.presentation.menu.account.AccountScreen
@@ -32,6 +33,7 @@ fun BikeOSNavGraph(navController: NavHostController = rememberNavController()) {
         composable(BikeOSDestinations.ONBOARDING) { OnboardingScreen(navController) }
         composable(BikeOSDestinations.SIGNUP) { SignupScreen(navController) }
 
+        composable(BikeOSDestinations.CLUSTER_BOOT) { ClusterBootScreen(navController) }
         composable(BikeOSDestinations.DASHBOARD) { DashboardScreen(navController) }
         composable(BikeOSDestinations.MENU_HOME) { HomeScreen(navController) }
         composable(BikeOSDestinations.MENU_APPEARANCE) { AppearanceScreen() }

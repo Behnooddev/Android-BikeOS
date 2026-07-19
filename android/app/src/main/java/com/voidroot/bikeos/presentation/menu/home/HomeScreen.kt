@@ -62,7 +62,7 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = hilt
                     modifier = Modifier
                         .size(160.dp)
                         .background(Brush.linearGradient(listOf(BikePrimary, BikeAccent)), CircleShape)
-                        .clickable { navController.navigate(BikeOSDestinations.DASHBOARD) },
+                        .clickable { navController.navigate(BikeOSDestinations.CLUSTER_BOOT) },
                     contentAlignment = Alignment.Center
                 ) {
                     Text("START", style = MaterialTheme.typography.titleMedium, color = BikeBackground)

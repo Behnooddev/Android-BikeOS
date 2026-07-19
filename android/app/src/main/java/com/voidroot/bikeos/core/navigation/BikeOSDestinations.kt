@@ -15,6 +15,7 @@ object BikeOSDestinations {
     const val ONBOARDING = "onboarding"
     const val SIGNUP = "signup"
 
+    const val CLUSTER_BOOT = "cluster_boot"
     const val DASHBOARD = "dashboard"
 
     const val MENU_HOME = "menu/home"

@@ -15,10 +15,14 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
         android:maxSdkVersion="30" />
 
+    <!-- Normal permission (no runtime prompt) - haptic feedback for the
+         engine-start boot animation. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:name=".BikeOSApplication"
         android:allowBackup="false"
-        android:icon="@drawable/ic_launcher"
+        android:icon="@mipmap/ic_launcher"
         android:label="BikeOS"
         android:theme="@style/Theme.BikeOS"
         android:supportsRtl="true">

@@ -13,8 +13,8 @@ android {
         applicationId = "com.voidroot.bikeos"
         minSdk = 29        // Android 10 - required for BLE feature set used by BikeOS
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.5.0" // UI/UX rebuild - Phase A (navigation, theme, immersive cluster)
+        versionCode = 6
+        versionName = "0.6.0" // Phase B - Engine-start boot animation
     }
 
     buildFeatures {
