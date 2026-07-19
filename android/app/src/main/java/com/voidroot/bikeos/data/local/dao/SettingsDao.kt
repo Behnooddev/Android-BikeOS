@@ -17,4 +17,7 @@ interface SettingsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: SettingsEntity)
+
+    @androidx.room.Query("DELETE FROM settings")
+    suspend fun clear()
 }

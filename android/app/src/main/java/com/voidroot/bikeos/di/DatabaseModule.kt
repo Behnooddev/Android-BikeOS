@@ -3,10 +3,13 @@ package com.voidroot.bikeos.di
 import android.content.Context
 import androidx.room.Room
 import com.voidroot.bikeos.data.local.BikeOSDatabase
+import com.voidroot.bikeos.data.local.MIGRATION_1_2
+import com.voidroot.bikeos.data.local.dao.AppStateDao
 import com.voidroot.bikeos.data.local.dao.BikeProfileDao
 import com.voidroot.bikeos.data.local.dao.DashboardWidgetDao
 import com.voidroot.bikeos.data.local.dao.RideSessionDao
 import com.voidroot.bikeos.data.local.dao.SettingsDao
+import com.voidroot.bikeos.data.local.dao.ThemeColorsDao
 import com.voidroot.bikeos.data.local.dao.UserProfileDao
 import dagger.Module
 import dagger.Provides
@@ -19,8 +22,9 @@ import javax.inject.Singleton
  * Single Room instance for the whole app lifetime.
  * `fallbackToDestructiveMigration()` is deliberately NOT enabled - per the
  * Update/Security spec, user data must never be silently dropped on a
- * schema bump. Every future version increase needs a real Migration added
- * to `.addMigrations(...)` here instead.
+ * schema bump. Every version increase adds a real Migration to
+ * `.addMigrations(...)` below instead (see MIGRATION_1_2's kdoc for the
+ * one caveat: it wasn't runtime-verified while being written).
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -30,6 +34,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): BikeOSDatabase =
         Room.databaseBuilder(context, BikeOSDatabase::class.java, BikeOSDatabase.DATABASE_NAME)
+            .addMigrations(MIGRATION_1_2)
             .build()
 
     @Provides
@@ -46,4 +51,10 @@ object DatabaseModule {
 
     @Provides
     fun provideDashboardWidgetDao(db: BikeOSDatabase): DashboardWidgetDao = db.dashboardWidgetDao()
+
+    @Provides
+    fun provideAppStateDao(db: BikeOSDatabase): AppStateDao = db.appStateDao()
+
+    @Provides
+    fun provideThemeColorsDao(db: BikeOSDatabase): ThemeColorsDao = db.themeColorsDao()
 }

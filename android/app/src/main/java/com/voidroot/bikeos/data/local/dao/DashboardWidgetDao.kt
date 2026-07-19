@@ -20,4 +20,7 @@ interface DashboardWidgetDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: DashboardWidgetEntity)
+
+    @Query("DELETE FROM dashboard_widget")
+    suspend fun clear()
 }

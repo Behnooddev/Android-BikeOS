@@ -54,4 +54,6 @@ class DashboardConfigRepository @Inject constructor(
     private fun defaultWidgets() = WidgetKeys.DEFAULT_ORDER.mapIndexed { index, key ->
         DashboardWidget(key, index, enabled = true)
     }
+
+    suspend fun clear() = dao.clear()
 }

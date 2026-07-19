@@ -17,4 +17,7 @@ interface UserProfileDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: UserProfileEntity)
+
+    @androidx.room.Query("DELETE FROM user_profile")
+    suspend fun clear()
 }

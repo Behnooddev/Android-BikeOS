@@ -49,4 +49,6 @@ class BikeRepository @Inject constructor(
             )
         )
     }
+
+    suspend fun clear() = dao.clear()
 }

@@ -2,9 +2,10 @@ package com.voidroot.bikeos.core.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
-private val BikeOSColorScheme = darkColorScheme(
+private val BikeOSDarkColorScheme = darkColorScheme(
     primary = BikePrimary,
     secondary = BikeAccent,
     background = BikeBackground,
@@ -15,15 +16,27 @@ private val BikeOSColorScheme = darkColorScheme(
     onSurface = BikeTextPrimary
 )
 
+private val BikeOSLightColorScheme = lightColorScheme(
+    primary = BikePrimary,
+    secondary = BikeAccent,
+    background = androidx.compose.ui.graphics.Color(0xFFF5F7FA),
+    surface = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
+    error = BikeDanger,
+    onPrimary = androidx.compose.ui.graphics.Color(0xFFFFFFFF),
+    onBackground = androidx.compose.ui.graphics.Color(0xFF0A0E14),
+    onSurface = androidx.compose.ui.graphics.Color(0xFF0A0E14)
+)
+
 /**
- * BikeOS is dark-only by product direction (cockpit UI, outdoor readability).
- * System dark-mode preference is intentionally not consulted - dark mode is
- * a fixed product decision here, not a system-preference follow.
+ * App-wide Material theme, driven by the Settings > Theme "Dark theme"
+ * toggle (see AppThemeViewModel) - separate from the cluster's own
+ * day/night color customization (see ClusterPalette/LocalClusterPalette),
+ * which only applies inside the Dashboard screen.
  */
 @Composable
-fun BikeOSTheme(content: @Composable () -> Unit) {
+fun BikeOSTheme(isDarkTheme: Boolean = true, content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = BikeOSColorScheme,
+        colorScheme = if (isDarkTheme) BikeOSDarkColorScheme else BikeOSLightColorScheme,
         typography = BikeOSTypography,
         content = content
     )

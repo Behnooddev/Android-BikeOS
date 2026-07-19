@@ -17,4 +17,7 @@ interface BikeProfileDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: BikeProfileEntity)
+
+    @androidx.room.Query("DELETE FROM bike_profile")
+    suspend fun clear()
 }

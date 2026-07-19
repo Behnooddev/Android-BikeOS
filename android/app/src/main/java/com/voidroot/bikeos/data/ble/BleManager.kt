@@ -60,6 +60,9 @@ class BleManager @Inject constructor(
     private val _buttonEvents = MutableSharedFlow<DeviceButtonEvent>(extraBufferCapacity = 8)
     val buttonEvents: SharedFlow<DeviceButtonEvent> = _buttonEvents.asSharedFlow()
 
+    private val _alarmTriggered = MutableStateFlow(false)
+    val alarmTriggered: StateFlow<Boolean> = _alarmTriggered.asStateFlow()
+
     private val _deviceInfo = MutableStateFlow<BikeOsDeviceInfo?>(null)
     val deviceInfo: StateFlow<BikeOsDeviceInfo?> = _deviceInfo.asStateFlow()
 
@@ -113,6 +116,7 @@ class BleManager @Inject constructor(
                     _connectionState.value = BleConnectionState.Disconnected
                     controlCharacteristic = null
                     _deviceInfo.value = null
+                    _alarmTriggered.value = false
                     g.close()
                 }
             }
@@ -178,6 +182,7 @@ class BleManager @Inject constructor(
             when (val decoded = BlePacket.decode(value)) {
                 is BlePacket.DecodedNotification.SensorData -> _sensorData.tryEmit(decoded.payload)
                 is BlePacket.DecodedNotification.ButtonEvent -> _buttonEvents.tryEmit(decoded.event)
+                is BlePacket.DecodedNotification.AlarmEvent -> _alarmTriggered.value = decoded.triggered
                 null -> Unit // malformed/unrecognized - already logged as dropped implicitly by decode() returning null
             }
         }

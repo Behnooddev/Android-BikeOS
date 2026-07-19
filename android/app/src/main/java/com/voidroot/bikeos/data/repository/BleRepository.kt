@@ -22,6 +22,7 @@ class BleRepository @Inject constructor(
     val deviceInfo: StateFlow<BikeOsDeviceInfo?> = bleManager.deviceInfo
     val sensorData: SharedFlow<SensorPayload> = bleManager.sensorData
     val buttonEvents: SharedFlow<DeviceButtonEvent> = bleManager.buttonEvents
+    val alarmTriggered: StateFlow<Boolean> = bleManager.alarmTriggered
 
     fun connect() = bleManager.startScanAndConnect()
     fun disconnect() = bleManager.disconnect()

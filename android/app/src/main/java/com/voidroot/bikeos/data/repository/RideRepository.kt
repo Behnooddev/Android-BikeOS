@@ -50,4 +50,6 @@ class RideRepository @javax.inject.Inject constructor(
     suspend fun saveCompletedRide(ride: RideSession) {
         dao.insert(ride.toEntity())
     }
+
+    suspend fun clearAll() = dao.clear()
 }

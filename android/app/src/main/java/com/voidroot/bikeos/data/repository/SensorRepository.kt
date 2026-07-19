@@ -1,11 +1,11 @@
 package com.voidroot.bikeos.data.repository
 
 import com.voidroot.bikeos.data.ble.BleConnectionState
-import com.voidroot.bikeos.data.fake.FakeSensorDataSource
-import com.voidroot.bikeos.data.fake.SensorSnapshot
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -13,17 +13,28 @@ import javax.inject.Inject
 import kotlin.math.PI
 
 /**
- * What the Dashboard actually consumes: one [SensorSnapshot] stream that
- * transparently switches between real BLE data (while connected) and the
- * Phase 1 fake generator (while not) - per the Communication Rules spec:
- * "When connection is lost: Android should... keep previous data safely"
- * and, just as importantly, never leave the cockpit UI showing nothing.
- *
+ * What the Dashboard actually renders. Per the hard product rule "the
+ * cluster must never show fake data": every field here is either real BLE
+ * telemetry or a real system value (the clock) - there is no simulated
+ * generator anymore. While disconnected, every sensor field is exactly 0
+ * and [isConnected] is false; the UI is responsible for rendering that
+ * honestly (dashed/greyed out), not for hiding the zeros.
+ */
+data class SensorSnapshot(
+    val speedKmh: Float = 0f,
+    val distanceKm: Float = 0f,
+    val calories: Int = 0,
+    val cadenceRpm: Int = 0,
+    val batteryPercent: Int = 0,
+    val isConnected: Boolean = false,
+    val currentTime: String = "--:--"
+)
+
+/**
  * Speed/distance conversion lives HERE, not in the firmware: the ESP32
  * reports raw wheel RPM (see [com.voidroot.bikeos.data.ble.SensorPayload]
  * kdoc), and this class turns that into km/h and accumulated km using the
- * wheel size from [BikeRepository] - the same "rider/bike-profile data
- * stays phone-side" reasoning calories already follow.
+ * wheel size from [BikeRepository].
  */
 class SensorRepository @Inject constructor(
     private val bleRepository: BleRepository,
@@ -35,7 +46,15 @@ class SensorRepository @Inject constructor(
         if (state is BleConnectionState.Connected) {
             realBleStream()
         } else {
-            FakeSensorDataSource.stream()
+            disconnectedClockStream()
+        }
+    }
+
+    /** Not fake sensor data - just a real, ticking clock so the clock widget doesn't freeze while disconnected. */
+    private fun disconnectedClockStream(): Flow<SensorSnapshot> = flow {
+        while (true) {
+            emit(SensorSnapshot(currentTime = timeFormat.format(Date()), isConnected = false))
+            delay(1000)
         }
     }
 
@@ -61,11 +80,10 @@ class SensorRepository @Inject constructor(
                 speedKmh = speedKmh,
                 distanceKm = cumulativeDistanceKm,
                 // Calories are computed on the Android side (rider-weight
-                // dependent - see SensorPayload's kdoc), not by the
-                // firmware. Real per-rider calorie calculation is a
-                // follow-up (needs a MET-based formula against UserRepository's
-                // weight); kept at 0 while connected rather than showing a
-                // fake number from a real device.
+                // dependent), not by the firmware - real per-rider calorie
+                // calculation is a follow-up (MET-based formula against
+                // UserRepository's weight), kept at 0 for now rather than
+                // showing a fabricated number.
                 calories = 0,
                 cadenceRpm = payload.cadenceRpm,
                 batteryPercent = payload.batteryPercent,

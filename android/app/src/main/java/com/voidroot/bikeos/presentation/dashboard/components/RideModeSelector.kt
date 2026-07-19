@@ -1,7 +1,5 @@
 package com.voidroot.bikeos.presentation.dashboard.components
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,14 +13,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.voidroot.bikeos.core.theme.BikeTextPrimary
-import com.voidroot.bikeos.core.theme.BikeTextSecondary
+import com.voidroot.bikeos.core.theme.LocalClusterPalette
 import com.voidroot.bikeos.presentation.dashboard.RideMode
 
 /**
  * Horizontal row of ride-mode chips. Selection is instant + animated color
- * feedback only in Phase 1 - recommendation messages tied to mode changes
- * (per the Alert System spec) arrive with the alert system in a later phase.
+ * feedback - recommendation messages tied to mode changes (per the Alert
+ * System spec) arrive with the alert system in a later phase.
  */
 @Composable
 fun RideModeSelector(
@@ -30,6 +27,8 @@ fun RideModeSelector(
     onSelect: (RideMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val palette = LocalClusterPalette.current
+
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -41,7 +40,7 @@ fun RideModeSelector(
                 label = "modeChipBackground"
             )
             val border by animateColorAsState(
-                targetValue = if (isSelected) mode.color else BikeTextSecondary.copy(alpha = 0.3f),
+                targetValue = if (isSelected) mode.color else palette.textSecondary.copy(alpha = 0.3f),
                 label = "modeChipBorder"
             )
 
@@ -55,7 +54,7 @@ fun RideModeSelector(
                 Text(
                     text = mode.label,
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) BikeTextPrimary else BikeTextSecondary
+                    color = if (isSelected) palette.textPrimary else palette.textSecondary
                 )
             }
         }

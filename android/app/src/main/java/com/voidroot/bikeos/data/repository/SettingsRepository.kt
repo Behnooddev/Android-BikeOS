@@ -9,11 +9,26 @@ import javax.inject.Inject
 data class AppSettings(
     val useMetricUnits: Boolean = true,
     val soundEnabled: Boolean = true,
-    val maxSpeedAlertKmh: Int = 40
+    val maxSpeedAlertKmh: Int = 40,
+    val isDarkTheme: Boolean = true,
+    val use24HourClock: Boolean = true,
+    val gearSuggestionsEnabled: Boolean = true,
+    val antiTheftAlarmEnabled: Boolean = false,
+    val reminderNotificationsEnabled: Boolean = true,
+    val engineStartAnimationEnabled: Boolean = true
 )
 
-private fun SettingsEntity.toDomain() = AppSettings(useMetricUnits, soundEnabled, maxSpeedAlertKmh)
-private fun AppSettings.toEntity() = SettingsEntity(0, useMetricUnits, soundEnabled, maxSpeedAlertKmh)
+private fun SettingsEntity.toDomain() = AppSettings(
+    useMetricUnits, soundEnabled, maxSpeedAlertKmh, isDarkTheme, use24HourClock,
+    gearSuggestionsEnabled, antiTheftAlarmEnabled, reminderNotificationsEnabled,
+    engineStartAnimationEnabled
+)
+
+private fun AppSettings.toEntity() = SettingsEntity(
+    0, useMetricUnits, soundEnabled, maxSpeedAlertKmh, isDarkTheme, use24HourClock,
+    gearSuggestionsEnabled, antiTheftAlarmEnabled, reminderNotificationsEnabled,
+    engineStartAnimationEnabled
+)
 
 class SettingsRepository @Inject constructor(
     private val dao: SettingsDao
@@ -24,4 +39,6 @@ class SettingsRepository @Inject constructor(
         val current = dao.get()?.toDomain() ?: AppSettings()
         dao.upsert(transform(current).toEntity())
     }
+
+    suspend fun clear() = dao.clear()
 }

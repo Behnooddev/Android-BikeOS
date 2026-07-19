@@ -19,4 +19,7 @@ interface RideSessionDao {
 
     @Insert
     suspend fun insert(entity: RideSessionEntity): Long
+
+    @Query("DELETE FROM ride_session")
+    suspend fun clear()
 }

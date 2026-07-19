@@ -2,6 +2,9 @@ package com.voidroot.bikeos.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.voidroot.bikeos.core.theme.ClusterPalette
+import com.voidroot.bikeos.core.theme.DefaultClusterPalette
+import com.voidroot.bikeos.core.theme.resolveClusterPalette
 import com.voidroot.bikeos.data.ble.ControlCommand
 import com.voidroot.bikeos.data.ble.DeviceButtonEvent
 import com.voidroot.bikeos.data.repository.BikeRepository
@@ -10,11 +13,15 @@ import com.voidroot.bikeos.data.repository.DashboardConfigRepository
 import com.voidroot.bikeos.data.repository.RideRepository
 import com.voidroot.bikeos.data.repository.RideSession
 import com.voidroot.bikeos.data.repository.SensorRepository
+import com.voidroot.bikeos.data.repository.ThemeColorsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -53,8 +60,8 @@ private data class RideAccumulator(
 )
 
 /**
- * Combines [SensorRepository]'s stream (real BLE data when connected, the
- * Phase 1 fake generator otherwise) with Room-backed bike/widget state and
+ * Combines [SensorRepository]'s stream (real BLE data when connected, real
+ * zeros when not - never fake) with Room-backed bike/widget state and
  * local ride-mode/ride-active selections into one [DashboardUiState].
  *
  * Also listens for handlebar Button Events (Mode/Gear Up/Gear Down) coming
@@ -68,7 +75,8 @@ class DashboardViewModel @Inject constructor(
     private val bikeRepository: BikeRepository,
     private val dashboardConfigRepository: DashboardConfigRepository,
     private val rideRepository: RideRepository,
-    private val bleRepository: BleRepository
+    private val bleRepository: BleRepository,
+    themeColorsRepository: ThemeColorsRepository
 ) : ViewModel() {
 
     private val _rideMode = MutableStateFlow(RideMode.CRUISE)
@@ -84,6 +92,18 @@ class DashboardViewModel @Inject constructor(
 
     private val _lightState = MutableStateFlow(LightState())
     val lightState: StateFlow<LightState> = _lightState.asStateFlow()
+
+    /**
+     * Re-resolved on every ThemeColors emission (i.e. whenever the user
+     * edits Appearance colors) - NOT re-evaluated on a timer, so the
+     * day/night switch itself only takes effect next time this flow
+     * happens to re-collect (e.g. re-entering the screen). Good enough for
+     * v1; a live day->night transition mid-ride is a nice-to-have, not a
+     * correctness requirement.
+     */
+    val clusterPalette: StateFlow<ClusterPalette> = themeColorsRepository.observe()
+        .map { resolveClusterPalette(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DefaultClusterPalette)
 
     init {
         viewModelScope.launch { dashboardConfigRepository.ensureSeeded() }

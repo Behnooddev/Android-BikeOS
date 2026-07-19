@@ -3,8 +3,8 @@ package com.voidroot.bikeos.presentation.dashboard
 /**
  * Everything the Dashboard screen needs to render one frame.
  * Sensor fields come from [com.voidroot.bikeos.data.repository.SensorRepository]
- * (real BLE data when connected, [com.voidroot.bikeos.data.fake.FakeSensorDataSource]
- * otherwise) - the shape is deliberately kept BLE-plausible.
+ * - real BLE data when connected, honest zeros + isConnected=false when
+ * not (see that class's kdoc: the cluster never shows fake data).
  *
  * [frontGear]/[rearGear] come from Room (via BikeRepository), and
  * [enabledWidgetKeys] drives which bottom-row cards the Dashboard actually
@@ -16,7 +16,7 @@ data class DashboardUiState(
     val distanceKm: Float = 0f,
     val calories: Int = 0,
     val cadenceRpm: Int = 0,
-    val batteryPercent: Int = 100,
+    val batteryPercent: Int = 0,
     val isConnected: Boolean = false,
     val frontGear: Int = 1,
     val rearGear: Int = 1,

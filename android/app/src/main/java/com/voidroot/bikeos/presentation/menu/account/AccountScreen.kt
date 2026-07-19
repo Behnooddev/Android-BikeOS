@@ -1,10 +1,10 @@
 package com.voidroot.bikeos.presentation.menu.account
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -23,9 +23,8 @@ import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
 
 /**
- * Rider profile form (name/email/username/age/height/weight per the
- * product spec's User Profile section). Used for calories calculation and
- * future recommendations - Room-backed via [AccountViewModel]/[com.voidroot.bikeos.data.repository.UserRepository].
+ * Profile edit screen - same fields collected at signup (minus password,
+ * which this screen never touches - see [com.voidroot.bikeos.data.repository.UserRepository.save]).
  */
 @Composable
 fun AccountScreen(viewModel: AccountViewModel = hiltViewModel()) {
@@ -39,12 +38,18 @@ fun AccountScreen(viewModel: AccountViewModel = hiltViewModel()) {
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Account", style = MaterialTheme.typography.headlineMedium, color = BikeTextPrimary)
+        Text("Profile", style = MaterialTheme.typography.headlineMedium, color = BikeTextPrimary)
 
         OutlinedTextField(
-            value = profile.name,
-            onValueChange = { v -> viewModel.update { it.copy(name = v) } },
-            label = { Text("Name") },
+            value = profile.firstName,
+            onValueChange = { v -> viewModel.update { it.copy(firstName = v) } },
+            label = { Text("First name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = profile.lastName,
+            onValueChange = { v -> viewModel.update { it.copy(lastName = v) } },
+            label = { Text("Last name") },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(
@@ -86,11 +91,7 @@ fun AccountScreen(viewModel: AccountViewModel = hiltViewModel()) {
             Text(if (saved) "Saved" else "Save")
         }
         if (saved) {
-            Text(
-                "Profile saved locally.",
-                style = MaterialTheme.typography.labelSmall,
-                color = BikeTextSecondary
-            )
+            Text("Profile saved locally.", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
         }
     }
 }

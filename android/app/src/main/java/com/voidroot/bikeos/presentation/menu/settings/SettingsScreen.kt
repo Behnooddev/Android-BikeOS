@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -20,14 +21,19 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
+import com.voidroot.bikeos.core.navigation.BikeOSDestinations
 import com.voidroot.bikeos.core.theme.BikeAccent
 import com.voidroot.bikeos.core.theme.BikeDanger
 import com.voidroot.bikeos.core.theme.BikeSuccess
@@ -36,21 +42,23 @@ import com.voidroot.bikeos.core.theme.BikeTextSecondary
 import com.voidroot.bikeos.data.ble.BleConnectionState
 
 /**
- * Settings: Units, Sound/Alerts, Bike Configuration, Backup - per the
- * product spec's Settings section. Theme/Dashboard-customization live on
- * the Appearance screen instead.
+ * Settings: Theme, Units, Alerts, Bluetooth, Bike Configuration, Backup,
+ * and Erase Data - per the product spec's Settings section. Per-widget
+ * enable/disable and day/night cluster colors live on the Appearance
+ * screen (reached from here, not from the main hamburger menu).
  *
  * Bike config fields write straight through to Room on every change rather
  * than batching into a local draft + Save button (unlike AccountScreen) -
- * simpler for Phase 2, at the cost of a DB write per keystroke. Debouncing
- * this is a reasonable follow-up polish item, not a correctness issue.
+ * simpler, at the cost of a DB write per keystroke. Debouncing this is a
+ * reasonable follow-up polish item, not a correctness issue.
  */
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewModel = hiltViewModel()) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val deviceInfo by viewModel.deviceInfo.collectAsStateWithLifecycle()
     val bike = uiState.bike
+    var showEraseConfirm by remember { mutableStateOf(false) }
 
     val bluetoothPermissions = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -74,23 +82,27 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     ) {
         Text("Settings", style = MaterialTheme.typography.headlineMedium, color = BikeTextPrimary)
 
-        SectionTitle("Units")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Use kilometers (off = miles)", color = BikeTextSecondary)
-            Switch(checked = uiState.settings.useMetricUnits, onCheckedChange = viewModel::setMetricUnits)
+        SectionTitle("Theme")
+        SettingsToggleRow("Dark theme (off = light)", uiState.settings.isDarkTheme, viewModel::setDarkTheme)
+        SettingsToggleRow("24-hour clock (off = 12-hour)", uiState.settings.use24HourClock, viewModel::setUse24HourClock)
+        SettingsToggleRow(
+            "Engine-start animation when entering the cluster",
+            uiState.settings.engineStartAnimationEnabled,
+            viewModel::setEngineStartAnimationEnabled
+        )
+        Button(onClick = { navController.navigate(BikeOSDestinations.MENU_APPEARANCE) }) {
+            Text("Appearance - widgets & cluster colors")
         }
 
-        SectionTitle("Alerts")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("Sound", color = BikeTextSecondary)
-            Switch(checked = uiState.settings.soundEnabled, onCheckedChange = viewModel::setSoundEnabled)
-        }
+        HorizontalDivider()
+        SectionTitle("Units")
+        SettingsToggleRow("Use kilometers (off = miles)", uiState.settings.useMetricUnits, viewModel::setMetricUnits)
+
+        SectionTitle("Alerts & Suggestions")
+        SettingsToggleRow("Sound", uiState.settings.soundEnabled, viewModel::setSoundEnabled)
+        SettingsToggleRow("Gear suggestions", uiState.settings.gearSuggestionsEnabled, viewModel::setGearSuggestionsEnabled)
+        SettingsToggleRow("Reminder notifications", uiState.settings.reminderNotificationsEnabled, viewModel::setReminderNotificationsEnabled)
+        SettingsToggleRow("Anti-theft alarm", uiState.settings.antiTheftAlarmEnabled, viewModel::setAntiTheftAlarmEnabled)
         OutlinedTextField(
             value = uiState.settings.maxSpeedAlertKmh.toString(),
             onValueChange = { v -> v.toIntOrNull()?.let(viewModel::setMaxSpeedAlert) },
@@ -124,11 +136,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 Text("Disconnect")
             }
         }
-        Text(
-            "Requires Bluetooth permission - tap Scan & Connect to grant it.",
-            style = MaterialTheme.typography.labelSmall,
-            color = BikeTextSecondary
-        )
 
         HorizontalDivider()
         SectionTitle("Bike Configuration")
@@ -190,7 +197,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         }
 
         HorizontalDivider()
-        SectionTitle("Backup")
+        SectionTitle("Backup (.bop)")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = viewModel::exportBackup) { Text("Export") }
             OutlinedButton(onClick = viewModel::importBackup) { Text("Import") }
@@ -198,6 +205,49 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         uiState.backupMessage?.let {
             Text(it, style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
         }
+
+        HorizontalDivider()
+        SectionTitle("Danger Zone")
+        Button(onClick = { showEraseConfirm = true }) {
+            Text("Erase all data")
+        }
+        Text(
+            "Deletes your profile, bike config, ride history, and settings, and takes you back through onboarding.",
+            style = MaterialTheme.typography.labelSmall,
+            color = BikeTextSecondary
+        )
+    }
+
+    if (showEraseConfirm) {
+        AlertDialog(
+            onDismissRequest = { showEraseConfirm = false },
+            title = { Text("Erase all data?") },
+            text = { Text("This cannot be undone. Consider exporting a .bop backup first.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showEraseConfirm = false
+                    viewModel.eraseAllData {
+                        navController.navigate(BikeOSDestinations.SPLASH) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                }) { Text("Erase", color = BikeDanger) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEraseConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = BikeTextSecondary)
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

@@ -1,7 +1,5 @@
 package com.voidroot.bikeos.presentation.dashboard.components
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,9 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.voidroot.bikeos.core.theme.BikeTextPrimary
-import com.voidroot.bikeos.core.theme.BikeTextSecondary
 import com.voidroot.bikeos.core.theme.BikeWarning
+import com.voidroot.bikeos.core.theme.LocalClusterPalette
 import com.voidroot.bikeos.presentation.dashboard.LightState
 
 /**
@@ -47,12 +44,13 @@ fun LightControlRow(
 
 @Composable
 private fun LightToggleChip(label: String, isOn: Boolean, onToggle: () -> Unit) {
+    val palette = LocalClusterPalette.current
     val background by animateColorAsState(
         targetValue = if (isOn) BikeWarning.copy(alpha = 0.25f) else Color.Transparent,
         label = "lightChipBackground"
     )
     val border by animateColorAsState(
-        targetValue = if (isOn) BikeWarning else BikeTextSecondary.copy(alpha = 0.3f),
+        targetValue = if (isOn) BikeWarning else palette.textSecondary.copy(alpha = 0.3f),
         label = "lightChipBorder"
     )
 
@@ -66,7 +64,7 @@ private fun LightToggleChip(label: String, isOn: Boolean, onToggle: () -> Unit) 
         Text(
             text = (if (isOn) "\u2600 " else "\u25CB ") + label,
             style = MaterialTheme.typography.labelSmall,
-            color = if (isOn) BikeTextPrimary else BikeTextSecondary
+            color = if (isOn) palette.textPrimary else palette.textSecondary
         )
     }
 }

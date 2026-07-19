@@ -13,8 +13,8 @@ android {
         applicationId = "com.voidroot.bikeos"
         minSdk = 29        // Android 10 - required for BLE feature set used by BikeOS
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.4.0" // Phase 4 - Hardware Integration
+        versionCode = 5
+        versionName = "0.5.0" // UI/UX rebuild - Phase A (navigation, theme, immersive cluster)
     }
 
     buildFeatures {
@@ -51,6 +51,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
     // Room - local persistence (Phase 2)

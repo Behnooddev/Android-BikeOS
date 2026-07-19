@@ -7,28 +7,41 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
-import com.voidroot.bikeos.core.theme.BikeGlassBorder
-import com.voidroot.bikeos.core.theme.BikeGlassTint
+import com.voidroot.bikeos.core.theme.LocalClusterPalette
 
 /**
- * Shared glassmorphism container used by every dashboard widget card.
+ * Shared glassmorphism container - reads [LocalClusterPalette] so it
+ * automatically reflects the cluster's day/night color customization
+ * wherever it's provided (Dashboard), and falls back to the default app
+ * palette everywhere else (Home, Settings, etc).
  *
- * Phase 0: flat semi-transparent fill + thin border (approximates the glass
- * look). Real background blur (Modifier.blur / RenderEffect, Android 12+
- * with a graceful fallback below API 31) is a Phase 1 visual-polish item -
- * intentionally not implemented yet so this component's public API doesn't
- * change once blur is added.
+ * True backdrop blur (blurring whatever is visually BEHIND the card) isn't
+ * something Compose supports directly without capturing/re-rendering the
+ * layer behind it, which is a much bigger change for a marginal visual
+ * gain here. This uses a subtle diagonal gradient fill + soft shadow +
+ * thin border instead, which reads as "glass" without that complexity.
  */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val palette = LocalClusterPalette.current
+    val shape = RoundedCornerShape(20.dp)
+
     Box(
         modifier = modifier
-            .background(BikeGlassTint, RoundedCornerShape(20.dp))
-            .border(1.dp, BikeGlassBorder, RoundedCornerShape(20.dp))
+            .shadow(elevation = 8.dp, shape = shape, ambientColor = palette.primary.copy(alpha = 0.15f))
+            .background(
+                Brush.linearGradient(
+                    listOf(palette.cardBackground.copy(alpha = 0.28f), palette.cardBackground.copy(alpha = 0.12f))
+                ),
+                shape
+            )
+            .border(1.dp, palette.cardBorder, shape)
             .padding(16.dp)
     ) {
         content()

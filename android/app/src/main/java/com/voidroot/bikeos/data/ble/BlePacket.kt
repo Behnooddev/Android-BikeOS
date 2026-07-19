@@ -43,7 +43,8 @@ enum class ControlCommand(val id: Int) {
     SET_MODE_ECO(0x10), SET_MODE_CRUISE(0x11), SET_MODE_SPRINT(0x12),
     SET_MODE_CLIMB(0x13), SET_MODE_DOWNHILL(0x14),
     UPDATE_FRONT_GEAR(0x20), UPDATE_REAR_GEAR(0x21),
-    REQUEST_STATUS(0x30), RESET_DEVICE(0x31), SYNC_TIME(0x32)
+    REQUEST_STATUS(0x30), RESET_DEVICE(0x31), SYNC_TIME(0x32),
+    ARM_ALARM(0x40), DISARM_ALARM(0x41)
 }
 
 /**
@@ -68,16 +69,19 @@ object BlePacket {
     const val TYPE_SENSOR_DATA = 0x01
     const val TYPE_DEVICE_STATUS = 0x03
     const val TYPE_BUTTON_EVENT = 0x04
+    const val TYPE_ALARM_EVENT = 0x05
     const val TYPE_CONTROL_COMMAND = 0x10
     const val TYPE_ERROR = 0xFF
 
     private const val HEADER_SIZE = 6 // messageType(1) + timestamp(4) + payloadLength(1)
     private const val SENSOR_PAYLOAD_SIZE = 5 // wheelRpm(2) + cadenceRpm(2) + battery(1)
     private const val BUTTON_EVENT_PAYLOAD_SIZE = 1
+    private const val ALARM_EVENT_PAYLOAD_SIZE = 1
 
     sealed class DecodedNotification {
         data class SensorData(val payload: SensorPayload) : DecodedNotification()
         data class ButtonEvent(val event: DeviceButtonEvent) : DecodedNotification()
+        data class AlarmEvent(val triggered: Boolean) : DecodedNotification()
     }
 
     private fun xorChecksum(bytes: ByteArray, length: Int): Byte {
@@ -111,6 +115,11 @@ object BlePacket {
                 if (payloadLength != BUTTON_EVENT_PAYLOAD_SIZE) return null
                 val id = bytes[HEADER_SIZE].toInt() and 0xFF
                 DeviceButtonEvent.fromId(id)?.let { DecodedNotification.ButtonEvent(it) }
+            }
+            TYPE_ALARM_EVENT -> {
+                if (payloadLength != ALARM_EVENT_PAYLOAD_SIZE) return null
+                val triggered = (bytes[HEADER_SIZE].toInt() and 0xFF) == 0x01
+                DecodedNotification.AlarmEvent(triggered)
             }
             else -> null
         }
