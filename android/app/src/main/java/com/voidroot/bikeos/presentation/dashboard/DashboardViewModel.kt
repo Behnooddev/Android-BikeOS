@@ -2,11 +2,16 @@ package com.voidroot.bikeos.presentation.dashboard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.voidroot.bikeos.core.health.CalorieCalculator
 import com.voidroot.bikeos.core.theme.ClusterPalette
 import com.voidroot.bikeos.core.theme.DefaultClusterPalette
 import com.voidroot.bikeos.core.theme.resolveClusterPalette
 import com.voidroot.bikeos.data.ble.ControlCommand
 import com.voidroot.bikeos.data.ble.DeviceButtonEvent
+import com.voidroot.bikeos.data.calls.CallRepository
+import com.voidroot.bikeos.data.calls.IncomingCall
+import com.voidroot.bikeos.data.media.MusicRepository
+import com.voidroot.bikeos.data.media.MusicState
 import com.voidroot.bikeos.data.repository.BikeRepository
 import com.voidroot.bikeos.data.repository.BleRepository
 import com.voidroot.bikeos.data.repository.DashboardConfigRepository
@@ -14,6 +19,7 @@ import com.voidroot.bikeos.data.repository.RideRepository
 import com.voidroot.bikeos.data.repository.RideSession
 import com.voidroot.bikeos.data.repository.SensorRepository
 import com.voidroot.bikeos.data.repository.ThemeColorsRepository
+import com.voidroot.bikeos.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -76,6 +82,9 @@ class DashboardViewModel @Inject constructor(
     private val dashboardConfigRepository: DashboardConfigRepository,
     private val rideRepository: RideRepository,
     private val bleRepository: BleRepository,
+    private val userRepository: UserRepository,
+    private val callRepository: CallRepository,
+    private val musicRepository: MusicRepository,
     themeColorsRepository: ThemeColorsRepository
 ) : ViewModel() {
 
@@ -87,11 +96,38 @@ class DashboardViewModel @Inject constructor(
     // plain var rather than a StateFlow.
     private var accumulator = RideAccumulator()
 
+    // Calorie accumulation - kept as a separate Float accumulator (not
+    // folded into RideAccumulator) because it accumulates continuously
+    // regardless of ride-active state, same as distanceKm already does in
+    // SensorRepository - Start/Stop Ride just captures the delta, exactly
+    // like it already does for distance.
+    private var totalCaloriesAccumulated = 0f
+    private var lastCalorieTickEpochMs = 0L
+
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     private val _lightState = MutableStateFlow(LightState())
     val lightState: StateFlow<LightState> = _lightState.asStateFlow()
+
+    val incomingCall: StateFlow<IncomingCall?> = callRepository.incomingCall
+    val musicState: StateFlow<MusicState> = musicRepository.musicState
+
+    fun hasCallPermissions() = callRepository.hasRequiredPermissions()
+    fun callPermissions() = callRepository.requiredPermissions
+    fun startCallListening() = callRepository.startListening()
+
+    fun hasNotificationAccess() = musicRepository.hasNotificationAccess()
+    fun startMusicListening() = musicRepository.startListening()
+    fun musicPlayPause() = musicRepository.playPause()
+    fun musicNext() = musicRepository.skipNext()
+    fun musicPrevious() = musicRepository.skipPrevious()
+
+    override fun onCleared() {
+        super.onCleared()
+        callRepository.stopListening()
+        musicRepository.stopListening()
+    }
 
     /**
      * Re-resolved on every ThemeColors emission (i.e. whenever the user
@@ -108,18 +144,40 @@ class DashboardViewModel @Inject constructor(
     init {
         viewModelScope.launch { dashboardConfigRepository.ensureSeeded() }
 
+        if (callRepository.hasRequiredPermissions()) callRepository.startListening()
+        if (musicRepository.hasNotificationAccess()) musicRepository.startListening()
+
         viewModelScope.launch {
             bleRepository.buttonEvents.collect { event -> onDeviceButtonEvent(event) }
         }
 
         viewModelScope.launch {
+            val bikeAndUser = combine(bikeRepository.observe(), userRepository.observe()) { bike, user -> bike to user }
+
             combine(
                 sensorRepository.stream(),
                 _rideMode,
-                bikeRepository.observe(),
+                bikeAndUser,
                 dashboardConfigRepository.observeWidgets(),
                 _isRideActive
-            ) { snapshot, mode, bike, widgets, active ->
+            ) { snapshot, mode, bikeUser, widgets, active ->
+                val (bike, user) = bikeUser
+
+                val now = System.currentTimeMillis()
+                if (lastCalorieTickEpochMs != 0L) {
+                    val elapsedSeconds = (now - lastCalorieTickEpochMs) / 1000f
+                    totalCaloriesAccumulated += CalorieCalculator.caloriesForTick(
+                        speedKmh = snapshot.speedKmh,
+                        weightKg = user.weightKg,
+                        elapsedSeconds = elapsedSeconds,
+                        frontGear = bike.currentFrontGear,
+                        rearGear = bike.currentRearGear,
+                        frontGearCount = bike.frontGearCount,
+                        rearGearCount = bike.rearGearCount
+                    )
+                }
+                lastCalorieTickEpochMs = now
+
                 if (active) {
                     accumulator = accumulator.copy(
                         speedSum = accumulator.speedSum + snapshot.speedKmh,
@@ -134,7 +192,7 @@ class DashboardViewModel @Inject constructor(
                 DashboardUiState(
                     speedKmh = snapshot.speedKmh,
                     distanceKm = snapshot.distanceKm,
-                    calories = snapshot.calories,
+                    calories = totalCaloriesAccumulated.toInt(),
                     cadenceRpm = snapshot.cadenceRpm,
                     batteryPercent = snapshot.batteryPercent,
                     isConnected = snapshot.isConnected,
@@ -178,13 +236,29 @@ class DashboardViewModel @Inject constructor(
                 val nextIndex = (modes.indexOf(_rideMode.value) + 1) % modes.size
                 _rideMode.value = modes[nextIndex]
             }
-            DeviceButtonEvent.GEAR_UP -> viewModelScope.launch {
-                val state = _uiState.value
-                bikeRepository.syncCurrentGear(state.frontGear, state.rearGear + 1)
+            DeviceButtonEvent.GEAR_UP -> {
+                // Per the spec: while a call is ringing, the handlebar
+                // Gear Up/Down buttons answer/reject it instead of
+                // touching the bike's gear - riders shouldn't have to
+                // touch the phone for either.
+                if (incomingCall.value != null) {
+                    callRepository.answerCall()
+                } else {
+                    viewModelScope.launch {
+                        val state = _uiState.value
+                        bikeRepository.syncCurrentGear(state.frontGear, state.rearGear + 1)
+                    }
+                }
             }
-            DeviceButtonEvent.GEAR_DOWN -> viewModelScope.launch {
-                val state = _uiState.value
-                bikeRepository.syncCurrentGear(state.frontGear, state.rearGear - 1)
+            DeviceButtonEvent.GEAR_DOWN -> {
+                if (incomingCall.value != null) {
+                    callRepository.rejectCall()
+                } else {
+                    viewModelScope.launch {
+                        val state = _uiState.value
+                        bikeRepository.syncCurrentGear(state.frontGear, state.rearGear - 1)
+                    }
+                }
             }
         }
     }

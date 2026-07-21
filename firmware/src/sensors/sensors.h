@@ -1,15 +1,9 @@
 #pragma once
-// Sensor module - Phase 4 (Hardware Integration), built incrementally as
-// parts get confirmed by the builder:
-//
-//  - Wheel + cadence speed sensing: MH Sensor Series digital hall modules
-//    (confirmed bought) - implemented for real below, ISR + rolling-window
-//    RPM calculation.
-//  - Rear distance: VL53L1X (confirmed bought, arriving soon) - implemented
-//    for real in sensors.cpp.
-//  - Motion/IMU (BMI270/MPU6050) and battery monitoring (INA219): NOT
-//    implemented - hardware not yet confirmed. Add them here the same way
-//    once purchased; battery is still simulated in ble_service.cpp for now.
+// Sensor module - Hall (wheel/cadence) + VL53L1X (rear distance), both
+// real. Motion/IMU (MPU6050) lives in motion.h/motion.cpp instead (kept
+// separate since alarm.cpp needs both this module's wheel-pulse timing AND
+// motion's accel data - splitting them avoids a circular dependency).
+// Battery (INA219) lives in power.h/power.cpp.
 //
 // Deliberate architecture choice: this module reports RAW wheel/cadence
 // RPM, not speed in km/h or distance in km. Converting RPM to speed needs
@@ -39,4 +33,9 @@ namespace bikeos::sensors {
 
     /** Crank rotations per minute, averaged over the last ~1s window. */
     uint16_t getCadenceRpm();
+
+    /** millis() timestamp of the most recent wheel Hall pulse - used by
+     *  alarm.cpp to detect "wheel moved while armed" without needing its
+     *  own duplicate ISR. 0 if no pulse has ever been seen. */
+    unsigned long getLastWheelPulseMs();
 }

@@ -156,5 +156,6 @@ uint16_t getRearDistanceMm() { return lastRearDistanceMm; }
 bool isRearSensorReady() { return rearSensorReady; }
 uint16_t getWheelRpm() { return lastWheelRpm; }
 uint16_t getCadenceRpm() { return lastCadenceRpm; }
+unsigned long getLastWheelPulseMs() { return lastWheelPulseMs; }
 
 } // namespace bikeos::sensors

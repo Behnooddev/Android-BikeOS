@@ -4,17 +4,25 @@
 #include "../bluetooth/ble_service.h"
 #include "../controls/controls.h"
 #include "../power/power.h"
+#include "../motion/motion.h"
+#include "../alarm/alarm.h"
 
 // BikeOS Firmware entry point.
-// Current state (Phase 4): all four hardware modules are real -
+// Current state: every hardware module the builder has confirmed
+// purchased is real -
 //   sensors    - Hall wheel/cadence RPM (ISR), VL53L1X rear distance
-//   ble        - advertising + all 3 GATT services, real sensor data +
-//                button events out, light commands in
+//   ble        - advertising + all 3 GATT services, real sensor/button/
+//                alarm events out, light + alarm arm/disarm commands in
 //   controls   - front/rear/body light MOSFETs, 4 handlebar buttons
 //   power      - INA219 battery voltage/current/percent
-// Motion/IMU (BMI270/MPU6050) is the only originally-planned sensor still
-// not wired in - not purchased yet. See docs/06_PHASE_PLAN.md and the
-// phase summary docs for history.
+//   motion     - MPU6050 accel magnitude (feeds the alarm system)
+//   alarm      - anti-theft: wheel-pulse-while-armed OR motion-delta
+//                trigger, buzzer + blinking lights, BLE alarm events
+//
+// init() order matters a little: sensors::init() calls Wire.begin()
+// first, and power::init()/motion::init() both rely on that same I2C bus
+// already being up (their own Wire.begin() calls are idempotent no-ops if
+// so, defensive if not).
 
 void setup() {
     Serial.begin(115200);
@@ -22,14 +30,18 @@ void setup() {
     Serial.println(BIKEOS_FIRMWARE_VERSION);
 
     bikeos::sensors::init();
-    bikeos::ble::init();
-    bikeos::controls::init();
     bikeos::power::init();
+    bikeos::motion::init();
+    bikeos::controls::init();
+    bikeos::alarm::init();
+    bikeos::ble::init();
 }
 
 void loop() {
     bikeos::sensors::poll();
-    bikeos::ble::tick();
-    bikeos::controls::poll();
     bikeos::power::poll();
+    bikeos::motion::poll();
+    bikeos::controls::poll();
+    bikeos::alarm::poll();
+    bikeos::ble::tick();
 }

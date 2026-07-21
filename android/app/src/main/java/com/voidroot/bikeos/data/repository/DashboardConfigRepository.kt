@@ -18,8 +18,10 @@ object WidgetKeys {
     const val CALORIES = "calories"
     const val CADENCE = "cadence"
     const val GEAR = "gear"
+    const val CALLS = "calls"
+    const val MUSIC = "music"
 
-    val DEFAULT_ORDER = listOf(DISTANCE, CALORIES, CADENCE, GEAR)
+    val DEFAULT_ORDER = listOf(DISTANCE, CALORIES, CADENCE, GEAR, CALLS, MUSIC)
 }
 
 data class DashboardWidget(val key: String, val position: Int, val enabled: Boolean)
@@ -35,14 +37,24 @@ class DashboardConfigRepository @Inject constructor(
             if (rows.isEmpty()) defaultWidgets() else rows.map { it.toDomain() }
         }
 
+    /**
+     * Seeds defaults on a fresh install, AND backfills any widget keys
+     * added to [WidgetKeys.DEFAULT_ORDER] after this device's table was
+     * first seeded (e.g. Calls/Music added in a later update) - without
+     * touching the position/enabled state of keys that already exist.
+     */
     suspend fun ensureSeeded() {
-        if (dao.getAll().isEmpty()) {
-            dao.upsertAll(
-                WidgetKeys.DEFAULT_ORDER.mapIndexed { index, key ->
-                    DashboardWidgetEntity(widgetKey = key, position = index, enabled = true)
-                }
-            )
-        }
+        val existing = dao.getAll()
+        val existingKeys = existing.map { it.widgetKey }.toSet()
+        val missing = WidgetKeys.DEFAULT_ORDER.filter { it !in existingKeys }
+        if (missing.isEmpty()) return
+
+        val nextPosition = (existing.maxOfOrNull { it.position } ?: -1) + 1
+        dao.upsertAll(
+            missing.mapIndexed { offset, key ->
+                DashboardWidgetEntity(widgetKey = key, position = nextPosition + offset, enabled = true)
+            }
+        )
     }
 
     suspend fun setEnabled(key: String, enabled: Boolean) {

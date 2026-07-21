@@ -10,6 +10,7 @@
 #include "../sensors/sensors.h"
 #include "../controls/controls.h"
 #include "../power/power.h"
+#include "../alarm/alarm.h"
 
 namespace bikeos::ble {
 namespace {
@@ -20,6 +21,7 @@ namespace {
 
     unsigned long lastNotifyMs = 0;
     const unsigned long NOTIFY_INTERVAL_MS = 500;
+    bool lastReportedAlarmTriggered = false;
 
     uint8_t xorChecksum(const uint8_t* bytes, size_t length) {
         uint8_t c = 0;
@@ -96,6 +98,37 @@ namespace {
         if (bikeos::controls::consumeGearDownButtonPress()) sendButtonEvent(BIKEOS_BUTTON_EVENT_GEAR_DOWN);
     }
 
+    /**
+     * One-byte Alarm Event packet (0x01 = triggered, 0x00 = cleared),
+     * again over the same Sensor Data characteristic. Sent once on each
+     * armed/disarmed... no - each triggered/cleared TRANSITION (edge-
+     * triggered, like button events), not on every tick, so Android's
+     * AlarmGuard dialog doesn't get spammed with duplicate notifications.
+     */
+    void sendAlarmEvent(bool isTriggered) {
+        if (!deviceConnected || sensorDataCharacteristic == nullptr) return;
+
+        uint8_t packet[6 + 1 + 1];
+        packet[0] = BIKEOS_MSG_TYPE_ALARM_EVENT;
+        uint32_t timestampSec = (uint32_t)(millis() / 1000);
+        memcpy(&packet[1], &timestampSec, sizeof(timestampSec));
+        packet[5] = 1; // payload length
+        packet[6] = isTriggered ? 0x01 : 0x00;
+        packet[7] = xorChecksum(packet, 7);
+
+        sensorDataCharacteristic->setValue(packet, sizeof(packet));
+        sensorDataCharacteristic->notify();
+    }
+
+    void pollAlarmEvent() {
+        if (!deviceConnected) return;
+        bool nowTriggered = bikeos::alarm::isTriggered();
+        if (nowTriggered != lastReportedAlarmTriggered) {
+            lastReportedAlarmTriggered = nowTriggered;
+            sendAlarmEvent(nowTriggered);
+        }
+    }
+
     class ServerCallbacks : public BLEServerCallbacks {
         void onConnect(BLEServer* s) override {
             deviceConnected = true;
@@ -152,6 +185,8 @@ namespace {
                 case 0x04: bikeos::controls::setRearLight(false);  break; // REAR_LIGHT_OFF
                 case 0x05: bikeos::controls::setBodyLight(true);   break; // BODY_LIGHT_ON
                 case 0x06: bikeos::controls::setBodyLight(false);  break; // BODY_LIGHT_OFF
+                case 0x40: bikeos::alarm::arm();    break; // ARM_ALARM
+                case 0x41: bikeos::alarm::disarm(); break; // DISARM_ALARM
                 default:
                     Serial.printf("[BLE] Control command 0x%02X received (no physical effect)\n", commandId);
                     break;
@@ -210,6 +245,7 @@ void init() {
 
 void tick() {
     pollButtonEvents();
+    pollAlarmEvent();
 
     if (deviceConnected && millis() - lastNotifyMs >= NOTIFY_INTERVAL_MS) {
         sendSensorData();

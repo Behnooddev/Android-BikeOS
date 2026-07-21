@@ -1,5 +1,9 @@
 package com.voidroot.bikeos.presentation.dashboard
 
+import android.content.Intent
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,8 +19,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,7 +33,9 @@ import com.voidroot.bikeos.core.theme.BikeDanger
 import com.voidroot.bikeos.core.theme.BikeSuccess
 import com.voidroot.bikeos.core.theme.LocalClusterPalette
 import com.voidroot.bikeos.data.repository.WidgetKeys
+import com.voidroot.bikeos.presentation.dashboard.components.CallWidget
 import com.voidroot.bikeos.presentation.dashboard.components.LightControlRow
+import com.voidroot.bikeos.presentation.dashboard.components.MusicWidget
 import com.voidroot.bikeos.presentation.dashboard.components.RideModeSelector
 import com.voidroot.bikeos.presentation.dashboard.components.SpeedGauge
 
@@ -42,7 +50,16 @@ import com.voidroot.bikeos.presentation.dashboard.components.SpeedGauge
  * individually toggleable via the Appearance screen, Start/Stop Ride
  * persists a completed RideSession to Room, and the Bike Control Panel's
  * light toggles send real Control Service commands to the ESP32. Mode/Gear
- * can also be changed from the physical handlebar buttons.
+ * -and, while a call is ringing, Answer/Reject- can also be driven from
+ * the physical handlebar buttons.
+ *
+ * Calls and Music widgets each need their own permission: Calls needs
+ * READ_PHONE_STATE/READ_CONTACTS/ANSWER_PHONE_CALLS (normal runtime
+ * prompt, requested here on first entry); Music needs "Notification
+ * access" (a special permission only grantable from system settings - see
+ * MusicRepository's kdoc), so instead of a prompt this screen shows a
+ * button that deep-links there, only when the Music widget is enabled and
+ * access isn't granted yet.
  */
 @Composable
 fun DashboardScreen(
@@ -52,8 +69,23 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lightState by viewModel.lightState.collectAsStateWithLifecycle()
     val clusterPalette by viewModel.clusterPalette.collectAsStateWithLifecycle()
+    val incomingCall by viewModel.incomingCall.collectAsStateWithLifecycle()
+    val musicState by viewModel.musicState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     ImmersiveMode()
+
+    val callPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results.values.all { it }) viewModel.startCallListening()
+    }
+
+    LaunchedEffect(Unit) {
+        if (WidgetKeys.CALLS in uiState.enabledWidgetKeys && !viewModel.hasCallPermissions()) {
+            callPermissionLauncher.launch(viewModel.callPermissions())
+        }
+    }
 
     CompositionLocalProvider(LocalClusterPalette provides clusterPalette) {
         Column(
@@ -74,6 +106,10 @@ fun DashboardScreen(
                 onBack = { navController.popBackStack() }
             )
 
+            if (WidgetKeys.CALLS in uiState.enabledWidgetKeys) {
+                CallWidget(incomingCall = incomingCall, modifier = Modifier.padding(top = 8.dp))
+            }
+
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
@@ -89,6 +125,33 @@ fun DashboardScreen(
                         onToggleBody = viewModel::toggleBodyLight,
                         modifier = Modifier.padding(top = 10.dp)
                     )
+                }
+            }
+
+            if (WidgetKeys.MUSIC in uiState.enabledWidgetKeys) {
+                if (viewModel.hasNotificationAccess()) {
+                    MusicWidget(
+                        state = musicState,
+                        onPlayPause = viewModel::musicPlayPause,
+                        onNext = viewModel::musicNext,
+                        onPrevious = viewModel::musicPrevious,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+                } else {
+                    GlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .clickable {
+                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                            }
+                    ) {
+                        Text(
+                            "Enable Notification access to control music from here",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = LocalClusterPalette.current.textSecondary
+                        )
+                    }
                 }
             }
 
