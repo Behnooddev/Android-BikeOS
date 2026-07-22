@@ -43,8 +43,8 @@ fun OnboardingGlyphIcon(glyph: OnboardingGlyph, tint: Color) {
                     moveTo(c.x, c.y - 70f)
                     lineTo(c.x + 55f, c.y - 40f)
                     lineTo(c.x + 55f, c.y + 20f)
-                    quadraticTo(c.x + 55f, c.y + 65f, c.x, c.y + 80f)
-                    quadraticTo(c.x - 55f, c.y + 65f, c.x - 55f, c.y + 20f)
+                    quadraticBezierTo(c.x + 55f, c.y + 65f, c.x, c.y + 80f)
+                    quadraticBezierTo(c.x - 55f, c.y + 65f, c.x - 55f, c.y + 20f)
                     lineTo(c.x - 55f, c.y - 40f)
                     close()
                 }

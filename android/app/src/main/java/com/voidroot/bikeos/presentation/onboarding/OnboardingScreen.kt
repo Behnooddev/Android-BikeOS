@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -33,6 +34,7 @@ import com.voidroot.bikeos.core.navigation.BikeOSDestinations
 import com.voidroot.bikeos.core.theme.BikePrimary
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(navController: NavHostController, viewModel: OnboardingViewModel = hiltViewModel()) {
     val pagerState = rememberPagerState(pageCount = { onboardingPages.size })
