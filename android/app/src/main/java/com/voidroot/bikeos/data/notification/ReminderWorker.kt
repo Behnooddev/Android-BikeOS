@@ -1,6 +1,7 @@
 package com.voidroot.bikeos.data.notification
 
 import android.Manifest
+import kotlinx.coroutines.flow.first
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
