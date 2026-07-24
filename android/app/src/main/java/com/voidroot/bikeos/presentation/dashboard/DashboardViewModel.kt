@@ -12,6 +12,7 @@ import com.voidroot.bikeos.data.calls.CallRepository
 import com.voidroot.bikeos.data.calls.IncomingCall
 import com.voidroot.bikeos.data.media.MusicRepository
 import com.voidroot.bikeos.data.media.MusicState
+import com.voidroot.bikeos.data.repository.AppStateRepository
 import com.voidroot.bikeos.data.repository.BikeRepository
 import com.voidroot.bikeos.data.repository.BleRepository
 import com.voidroot.bikeos.data.repository.DashboardConfigRepository
@@ -85,6 +86,7 @@ class DashboardViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val callRepository: CallRepository,
     private val musicRepository: MusicRepository,
+    private val appStateRepository: AppStateRepository,
     themeColorsRepository: ThemeColorsRepository
 ) : ViewModel() {
 
@@ -146,6 +148,14 @@ class DashboardViewModel @Inject constructor(
 
         if (callRepository.hasRequiredPermissions()) callRepository.startListening()
         if (musicRepository.hasNotificationAccess()) musicRepository.startListening()
+
+        // Ride tracking is now automatic: entering the cluster (this
+        // ViewModel being created) starts it, and exitCluster() (called
+        // from the Exit button / system back) stops and saves it. There's
+        // no separate manual Start/Stop Ride control anymore - entering
+        // the cockpit IS starting the ride, which is what the builder's
+        // feedback asked for.
+        startRide()
 
         viewModelScope.launch {
             bleRepository.buttonEvents.collect { event -> onDeviceButtonEvent(event) }
@@ -263,7 +273,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun startRide() {
+    private fun startRide() {
         if (_isRideActive.value) return
         accumulator = RideAccumulator(
             startTimeEpochMs = System.currentTimeMillis(),
@@ -271,9 +281,21 @@ class DashboardViewModel @Inject constructor(
             caloriesAtStart = _uiState.value.calories
         )
         _isRideActive.value = true
+        viewModelScope.launch { appStateRepository.recordRideStart(accumulator.startTimeEpochMs) }
     }
 
-    fun stopRide() {
+    /**
+     * Stops ride tracking, saves the completed RideSession to Room, and
+     * invokes [onExited] once the save is enqueued - called from the
+     * Dashboard's Exit button and from the system-back handler, so both
+     * exit paths save the ride the same way (see DashboardScreen).
+     */
+    fun exitCluster(onExited: () -> Unit) {
+        stopRide()
+        onExited()
+    }
+
+    private fun stopRide() {
         if (!_isRideActive.value) return
         val acc = accumulator
         val state = _uiState.value

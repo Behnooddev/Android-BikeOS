@@ -11,11 +11,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.DirectionsBike
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -28,29 +38,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import com.voidroot.bikeos.core.common.GlassCard
 import com.voidroot.bikeos.core.navigation.BikeOSDestinations
 import com.voidroot.bikeos.core.theme.BikeAccent
+import com.voidroot.bikeos.core.theme.BikeBackground
 import com.voidroot.bikeos.core.theme.BikeDanger
 import com.voidroot.bikeos.core.theme.BikeSuccess
 import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
 import com.voidroot.bikeos.data.ble.BleConnectionState
+import com.voidroot.bikeos.presentation.common.MenuScreenHeader
 
 /**
- * Settings: Theme, Units, Alerts, Bluetooth, Bike Configuration, Backup,
- * and Erase Data - per the product spec's Settings section. Per-widget
- * enable/disable and day/night cluster colors live on the Appearance
- * screen (reached from here, not from the main hamburger menu).
- *
- * Bike config fields write straight through to Room on every change rather
- * than batching into a local draft + Save button (unlike AccountScreen) -
- * simpler, at the cost of a DB write per keystroke. Debouncing this is a
- * reasonable follow-up polish item, not a correctness issue.
+ * Settings, redesigned as grouped cards (one GlassCard per topic, each
+ * with an icon + title) rather than a flat list with plain dividers -
+ * per the "professional, not messy" feedback. Per-widget enable/disable
+ * and day/night cluster colors live on the Appearance screen (reached
+ * from here, not from the main hamburger menu).
  */
 @Composable
 fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewModel = hiltViewModel()) {
@@ -77,145 +88,147 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium, color = BikeTextPrimary)
+        MenuScreenHeader("Settings", navController)
 
-        SectionTitle("Theme")
-        SettingsToggleRow("Dark theme (off = light)", uiState.settings.isDarkTheme, viewModel::setDarkTheme)
-        SettingsToggleRow("24-hour clock (off = 12-hour)", uiState.settings.use24HourClock, viewModel::setUse24HourClock)
-        SettingsToggleRow(
-            "Engine-start animation when entering the cluster",
-            uiState.settings.engineStartAnimationEnabled,
-            viewModel::setEngineStartAnimationEnabled
-        )
-        Button(onClick = { navController.navigate(BikeOSDestinations.MENU_APPEARANCE) }) {
-            Text("Appearance - widgets & cluster colors")
+        SettingsSection(title = "Theme & Display", icon = Icons.Filled.Palette) {
+            SettingsToggleRow("Dark theme", "Off switches to a light appearance", uiState.settings.isDarkTheme, viewModel::setDarkTheme)
+            SettingsToggleRow("24-hour clock", "Off shows 12-hour time", uiState.settings.use24HourClock, viewModel::setUse24HourClock)
+            SettingsToggleRow(
+                "Engine-start animation",
+                "The gauge sweep + sound when entering the cluster",
+                uiState.settings.engineStartAnimationEnabled,
+                viewModel::setEngineStartAnimationEnabled
+            )
+            OutlinedButton(
+                onClick = { navController.navigate(BikeOSDestinations.MENU_APPEARANCE) },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Appearance - widgets & cluster colors") }
         }
 
-        HorizontalDivider()
-        SectionTitle("Units")
-        SettingsToggleRow("Use kilometers (off = miles)", uiState.settings.useMetricUnits, viewModel::setMetricUnits)
-
-        SectionTitle("Alerts & Suggestions")
-        SettingsToggleRow("Sound", uiState.settings.soundEnabled, viewModel::setSoundEnabled)
-        SettingsToggleRow("Gear suggestions", uiState.settings.gearSuggestionsEnabled, viewModel::setGearSuggestionsEnabled)
-        SettingsToggleRow("Reminder notifications", uiState.settings.reminderNotificationsEnabled, viewModel::setReminderNotificationsEnabled)
-        SettingsToggleRow("Anti-theft alarm", uiState.settings.antiTheftAlarmEnabled, viewModel::setAntiTheftAlarmEnabled)
-        OutlinedTextField(
-            value = uiState.settings.maxSpeedAlertKmh.toString(),
-            onValueChange = { v -> v.toIntOrNull()?.let(viewModel::setMaxSpeedAlert) },
-            label = { Text("Max speed alert (km/h)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        HorizontalDivider()
-        SectionTitle("Bluetooth Configuration")
-        val (statusText, statusColor) = when (val state = connectionState) {
-            is BleConnectionState.Disconnected -> "Disconnected" to BikeTextSecondary
-            is BleConnectionState.Scanning -> "Scanning..." to BikeAccent
-            is BleConnectionState.Connecting -> "Connecting..." to BikeAccent
-            is BleConnectionState.Connected -> "Connected" to BikeSuccess
-            is BleConnectionState.Failed -> "Failed: ${state.reason}" to BikeDanger
+        SettingsSection(title = "Units & Alerts", icon = Icons.Filled.Speed) {
+            SettingsToggleRow("Kilometers", "Off switches to miles", uiState.settings.useMetricUnits, viewModel::setMetricUnits)
+            SettingsToggleRow("Sound", "Alert and notification sounds", uiState.settings.soundEnabled, viewModel::setSoundEnabled)
+            SettingsToggleRow("Gear suggestions", "Recommendations while riding", uiState.settings.gearSuggestionsEnabled, viewModel::setGearSuggestionsEnabled)
+            OutlinedTextField(
+                value = uiState.settings.maxSpeedAlertKmh.toString(),
+                onValueChange = { v -> v.toIntOrNull()?.let(viewModel::setMaxSpeedAlert) },
+                label = { Text("Max speed alert (km/h)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-        Text(statusText, color = statusColor)
-        deviceInfo?.let { info ->
+
+        SettingsSection(title = "Reminders & Security", icon = Icons.Filled.Security) {
+            SettingsToggleRow("Ride reminders", "A nudge around your usual ride time if you haven't ridden today", uiState.settings.reminderNotificationsEnabled, viewModel::setReminderNotificationsEnabled)
+            SettingsToggleRow("Anti-theft alarm", "Buzzer + blinking lights if the bike is disturbed while armed", uiState.settings.antiTheftAlarmEnabled, viewModel::setAntiTheftAlarmEnabled)
+        }
+
+        SettingsSection(title = "Bluetooth Configuration", icon = Icons.Filled.Bluetooth) {
+            val (statusText, statusColor) = when (val state = connectionState) {
+                is BleConnectionState.Disconnected -> "Disconnected" to BikeTextSecondary
+                is BleConnectionState.Scanning -> "Scanning..." to BikeAccent
+                is BleConnectionState.Connecting -> "Connecting..." to BikeAccent
+                is BleConnectionState.Connected -> "Connected" to BikeSuccess
+                is BleConnectionState.Failed -> "Failed: ${state.reason}" to BikeDanger
+            }
+            Text(statusText, color = statusColor, style = MaterialTheme.typography.bodyMedium)
+            deviceInfo?.let { info ->
+                Text(
+                    "Device: ${info.deviceId}" + (info.firmwareVersion?.let { " · fw $it" } ?: ""),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = BikeTextSecondary
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { permissionLauncher.launch(bluetoothPermissions) }) { Text("Scan & Connect") }
+                OutlinedButton(onClick = viewModel::disconnectDevice) { Text("Disconnect") }
+            }
+        }
+
+        SettingsSection(title = "Bike Configuration", icon = Icons.Filled.DirectionsBike) {
+            OutlinedTextField(
+                value = bike.bikeName,
+                onValueChange = { viewModel.saveBikeConfig(bike.copy(bikeName = it)) },
+                label = { Text("Bike name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = bike.bikeType,
+                onValueChange = { viewModel.saveBikeConfig(bike.copy(bikeType = it)) },
+                label = { Text("Bike type") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = bike.wheelSizeInches.toString(),
+                onValueChange = { v -> v.toFloatOrNull()?.let { viewModel.saveBikeConfig(bike.copy(wheelSizeInches = it)) } },
+                label = { Text("Wheel size (inches)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = bike.frontGearCount.toString(),
+                    onValueChange = { v -> v.toIntOrNull()?.let { viewModel.saveBikeConfig(bike.copy(frontGearCount = it)) } },
+                    label = { Text("Front gears") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+                OutlinedTextField(
+                    value = bike.rearGearCount.toString(),
+                    onValueChange = { v -> v.toIntOrNull()?.let { viewModel.saveBikeConfig(bike.copy(rearGearCount = it)) } },
+                    label = { Text("Rear gears") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+            }
             Text(
-                "Device: ${info.deviceId}" + (info.firmwareVersion?.let { " · fw $it" } ?: ""),
+                "Total combinations: ${bike.totalGearCombinations}",
                 style = MaterialTheme.typography.labelSmall,
                 color = BikeTextSecondary
             )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { permissionLauncher.launch(bluetoothPermissions) }) {
-                Text("Scan & Connect")
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = bike.currentFrontGear.toString(),
+                    onValueChange = { v -> v.toIntOrNull()?.let { viewModel.syncGear(it, bike.currentRearGear) } },
+                    label = { Text("Current front gear") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+                OutlinedTextField(
+                    value = bike.currentRearGear.toString(),
+                    onValueChange = { v -> v.toIntOrNull()?.let { viewModel.syncGear(bike.currentFrontGear, it) } },
+                    label = { Text("Current rear gear") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
             }
-            OutlinedButton(onClick = viewModel::disconnectDevice) {
-                Text("Disconnect")
+        }
+
+        SettingsSection(title = "Backup (.bop)", icon = Icons.Filled.Save) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = viewModel::exportBackup) { Text("Export") }
+                OutlinedButton(onClick = viewModel::importBackup) { Text("Import") }
+            }
+            uiState.backupMessage?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
             }
         }
 
-        HorizontalDivider()
-        SectionTitle("Bike Configuration")
-        OutlinedTextField(
-            value = bike.bikeName,
-            onValueChange = { viewModel.saveBikeConfig(bike.copy(bikeName = it)) },
-            label = { Text("Bike name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = bike.bikeType,
-            onValueChange = { viewModel.saveBikeConfig(bike.copy(bikeType = it)) },
-            label = { Text("Bike type") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = bike.wheelSizeInches.toString(),
-            onValueChange = { v -> v.toFloatOrNull()?.let { viewModel.saveBikeConfig(bike.copy(wheelSizeInches = it)) } },
-            label = { Text("Wheel size (inches)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = bike.frontGearCount.toString(),
-                onValueChange = { v -> v.toIntOrNull()?.let { viewModel.saveBikeConfig(bike.copy(frontGearCount = it)) } },
-                label = { Text("Front gears") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().weight(1f)
+        SettingsSection(title = "Danger Zone", icon = Icons.Filled.WarningAmber, accentColor = BikeDanger) {
+            Text(
+                "Deletes your profile, bike config, ride history, colors, and settings, then takes you back through onboarding.",
+                style = MaterialTheme.typography.labelSmall,
+                color = BikeTextSecondary
             )
-            OutlinedTextField(
-                value = bike.rearGearCount.toString(),
-                onValueChange = { v -> v.toIntOrNull()?.let { viewModel.saveBikeConfig(bike.copy(rearGearCount = it)) } },
-                label = { Text("Rear gears") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().weight(1f)
-            )
+            Button(
+                onClick = { showEraseConfirm = true },
+                colors = ButtonDefaults.buttonColors(containerColor = BikeDanger),
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Erase all data") }
         }
-        Text(
-            "Total combinations: ${bike.totalGearCombinations}",
-            style = MaterialTheme.typography.labelSmall,
-            color = BikeTextSecondary
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = bike.currentFrontGear.toString(),
-                onValueChange = { v -> v.toIntOrNull()?.let { viewModel.syncGear(it, bike.currentRearGear) } },
-                label = { Text("Current front gear") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().weight(1f)
-            )
-            OutlinedTextField(
-                value = bike.currentRearGear.toString(),
-                onValueChange = { v -> v.toIntOrNull()?.let { viewModel.syncGear(bike.currentFrontGear, it) } },
-                label = { Text("Current rear gear") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().weight(1f)
-            )
-        }
-
-        HorizontalDivider()
-        SectionTitle("Backup (.bop)")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = viewModel::exportBackup) { Text("Export") }
-            OutlinedButton(onClick = viewModel::importBackup) { Text("Import") }
-        }
-        uiState.backupMessage?.let {
-            Text(it, style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
-        }
-
-        HorizontalDivider()
-        SectionTitle("Danger Zone")
-        Button(onClick = { showEraseConfirm = true }) {
-            Text("Erase all data")
-        }
-        Text(
-            "Deletes your profile, bike config, ride history, and settings, and takes you back through onboarding.",
-            style = MaterialTheme.typography.labelSmall,
-            color = BikeTextSecondary
-        )
     }
 
     if (showEraseConfirm) {
@@ -241,17 +254,38 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
 }
 
 @Composable
-private fun SettingsToggleRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, color = BikeTextSecondary)
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+private fun SettingsSection(
+    title: String,
+    icon: ImageVector,
+    accentColor: androidx.compose.ui.graphics.Color = BikeAccent,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.padding(end = 8.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = BikeTextPrimary
+                )
+            }
+            content()
+        }
     }
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, color = BikeTextPrimary)
+private fun SettingsToggleRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, color = BikeTextPrimary, style = MaterialTheme.typography.bodyMedium)
+            Text(subtitle, color = BikeTextSecondary, style = MaterialTheme.typography.labelSmall)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
 }

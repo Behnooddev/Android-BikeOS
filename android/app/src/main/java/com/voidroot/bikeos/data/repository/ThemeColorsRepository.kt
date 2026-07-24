@@ -38,4 +38,7 @@ class ThemeColorsRepository @Inject constructor(
     fun observe(): Flow<ThemeColors> = dao.observe().map { it?.toDomain() ?: ThemeColorsEntity().toDomain() }
 
     suspend fun save(colors: ThemeColors) = dao.upsert(colors.toEntity())
+
+    /** Used by Settings > Erase Data - without this, custom cluster colors would survive an otherwise-full wipe. */
+    suspend fun resetToDefault() = dao.clear()
 }

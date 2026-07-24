@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -28,7 +28,8 @@ import com.voidroot.bikeos.core.theme.LocalClusterPalette
  *
  * The fill fraction and the digital number both animate through a low-
  * stiffness spring rather than snapping instantly, which is what gives the
- * "liquid rising/falling" feel the UI spec asks for.
+ * "liquid rising/falling" feel the UI spec asks for. A soft radial glow
+ * sits behind the whole gauge for a bit more depth/premium feel.
  */
 @Composable
 fun SpeedGauge(
@@ -50,7 +51,17 @@ fun SpeedGauge(
         label = "speedNumber"
     )
 
-    Box(modifier = modifier.size(260.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(280.dp), contentAlignment = Alignment.Center) {
+        // Soft ambient glow behind the gauge - purely decorative depth.
+        Canvas(modifier = Modifier.size(280.dp)) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(palette.primary.copy(alpha = 0.10f), palette.primary.copy(alpha = 0f))
+                ),
+                radius = size.minDimension / 2f
+            )
+        }
+
         Canvas(modifier = Modifier.size(260.dp)) {
             val strokeWidth = 22.dp.toPx()
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)

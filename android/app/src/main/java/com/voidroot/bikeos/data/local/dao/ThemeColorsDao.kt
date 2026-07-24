@@ -17,4 +17,7 @@ interface ThemeColorsDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entity: ThemeColorsEntity)
+
+    @Query("DELETE FROM theme_colors")
+    suspend fun clear()
 }

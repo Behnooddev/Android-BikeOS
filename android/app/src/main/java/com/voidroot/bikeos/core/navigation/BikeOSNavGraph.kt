@@ -36,10 +36,10 @@ fun BikeOSNavGraph(navController: NavHostController = rememberNavController()) {
         composable(BikeOSDestinations.CLUSTER_BOOT) { ClusterBootScreen(navController) }
         composable(BikeOSDestinations.DASHBOARD) { DashboardScreen(navController) }
         composable(BikeOSDestinations.MENU_HOME) { HomeScreen(navController) }
-        composable(BikeOSDestinations.MENU_APPEARANCE) { AppearanceScreen() }
-        composable(BikeOSDestinations.MENU_CALCULATOR) { CalculatorScreen() }
+        composable(BikeOSDestinations.MENU_APPEARANCE) { AppearanceScreen(navController) }
+        composable(BikeOSDestinations.MENU_CALCULATOR) { CalculatorScreen(navController) }
         composable(BikeOSDestinations.MENU_SETTINGS) { SettingsScreen(navController) }
-        composable(BikeOSDestinations.MENU_ACCOUNT) { AccountScreen() }
-        composable(BikeOSDestinations.MENU_ABOUT) { AboutScreen() }
+        composable(BikeOSDestinations.MENU_ACCOUNT) { AccountScreen(navController) }
+        composable(BikeOSDestinations.MENU_ABOUT) { AboutScreen(navController) }
     }
 }

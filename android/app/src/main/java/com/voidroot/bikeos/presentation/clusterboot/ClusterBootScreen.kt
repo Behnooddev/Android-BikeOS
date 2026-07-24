@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.voidroot.bikeos.core.common.ImmersiveMode
+import com.voidroot.bikeos.core.common.LandscapeOnly
 import com.voidroot.bikeos.core.navigation.BikeOSDestinations
 import com.voidroot.bikeos.data.ble.BleConnectionState
 import com.voidroot.bikeos.presentation.common.PermissionRationale
@@ -46,6 +47,7 @@ fun ClusterBootScreen(navController: NavHostController, viewModel: ClusterBootVi
     var showPermissionRationale by remember { mutableStateOf(false) }
 
     ImmersiveMode()
+    LandscapeOnly()
 
     val bluetoothPermissions = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

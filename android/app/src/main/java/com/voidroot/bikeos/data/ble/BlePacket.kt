@@ -4,6 +4,20 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
+ * BikeOS BLE Application Protocol - Android-side single source of truth.
+ *
+ * MUST stay byte-for-byte identical to the firmware's
+ * `firmware/src/protocol/bikeos_protocol.h` (message types, event IDs,
+ * command IDs, payload sizes) - that file and this one are meant to be
+ * edited together, always. A real bug (BIKEOS_MSG_TYPE_ALARM_EVENT used
+ * in firmware but never defined) happened because protocol constants were
+ * scattered instead of centralized - bikeos_protocol.h was created to fix
+ * that on the firmware side; this file is the equivalent on the Android
+ * side. No shared code-gen between the two yet (flagged as tech debt in
+ * the architecture review's "core-ble-protocol" suggestion).
+ */
+
+/**
  * Raw values a Sensor Data notification carries.
  *
  * Speed/distance are NOT here - the firmware reports raw wheel rotation

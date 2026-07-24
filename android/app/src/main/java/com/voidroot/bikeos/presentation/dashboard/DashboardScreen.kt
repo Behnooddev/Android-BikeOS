@@ -2,6 +2,7 @@ package com.voidroot.bikeos.presentation.dashboard
 
 import android.content.Intent
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -17,12 +18,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.voidroot.bikeos.core.common.GlassCard
 import com.voidroot.bikeos.core.common.ImmersiveMode
+import com.voidroot.bikeos.core.common.LandscapeOnly
 import com.voidroot.bikeos.core.theme.BikeDanger
 import com.voidroot.bikeos.core.theme.BikeSuccess
 import com.voidroot.bikeos.core.theme.LocalClusterPalette
@@ -41,26 +44,26 @@ import com.voidroot.bikeos.presentation.dashboard.components.RideModeSelector
 import com.voidroot.bikeos.presentation.dashboard.components.SpeedGauge
 
 /**
- * Root cockpit screen - fully immersive (system bars hidden, see
- * [ImmersiveMode]) and themed via [LocalClusterPalette] (user-customizable
- * day/night colors, resolved in [DashboardViewModel]).
+ * Root cockpit screen - landscape-only (see [LandscapeOnly]) and fully
+ * immersive (system bars hidden, see [ImmersiveMode]), themed via
+ * [LocalClusterPalette] (user-customizable day/night colors, resolved in
+ * [DashboardViewModel]).
+ *
+ * Ride tracking is automatic: entering this screen starts it, and Exit
+ * (or the system back gesture/button - both routed through the same
+ * [DashboardViewModel.exitCluster]) stops and saves it. There is no
+ * separate manual Start/Stop Ride control - entering the cockpit IS
+ * starting the ride, which is a simpler mental model than a second
+ * "start" button living inside the thing Home's Start button already
+ * took you into.
  *
  * Sensor values come from [DashboardViewModel]'s SensorRepository (real
  * BLE data when connected, honest zeros otherwise - never fake). Gear
  * comes from the Room-backed bike profile, bottom-row cards are
- * individually toggleable via the Appearance screen, Start/Stop Ride
- * persists a completed RideSession to Room, and the Bike Control Panel's
- * light toggles send real Control Service commands to the ESP32. Mode/Gear
- * -and, while a call is ringing, Answer/Reject- can also be driven from
- * the physical handlebar buttons.
- *
- * Calls and Music widgets each need their own permission: Calls needs
- * READ_PHONE_STATE/READ_CONTACTS/ANSWER_PHONE_CALLS (normal runtime
- * prompt, requested here on first entry); Music needs "Notification
- * access" (a special permission only grantable from system settings - see
- * MusicRepository's kdoc), so instead of a prompt this screen shows a
- * button that deep-links there, only when the Music widget is enabled and
- * access isn't granted yet.
+ * individually toggleable via the Appearance screen, and the Bike Control
+ * Panel's light toggles send real Control Service commands to the ESP32.
+ * Mode/Gear -and, while a call is ringing, Answer/Reject- can also be
+ * driven from the physical handlebar buttons.
  */
 @Composable
 fun DashboardScreen(
@@ -75,6 +78,16 @@ fun DashboardScreen(
     val context = LocalContext.current
 
     ImmersiveMode()
+    LandscapeOnly()
+
+    fun exit() {
+        viewModel.exitCluster { navController.popBackStack() }
+    }
+
+    // System back (gesture or hardware button) exits the same way the
+    // Exit button does, so a ride is always saved regardless of how the
+    // rider leaves the cluster.
+    BackHandler(onBack = ::exit)
 
     val callPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -89,81 +102,84 @@ fun DashboardScreen(
     }
 
     CompositionLocalProvider(LocalClusterPalette provides clusterPalette) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(clusterPalette.background)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .background(
+                    Brush.verticalGradient(
+                        listOf(clusterPalette.background, clusterPalette.background.copy(alpha = 0.92f))
+                    )
+                )
         ) {
-            TopStatusRow(
-                isConnected = uiState.isConnected,
-                batteryPercent = uiState.batteryPercent,
-                currentTime = uiState.currentTime,
-                isRideActive = uiState.isRideActive,
-                onToggleRide = {
-                    if (uiState.isRideActive) viewModel.stopRide() else viewModel.startRide()
-                },
-                onBack = { navController.popBackStack() }
-            )
+            Column(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                TopStatusRow(
+                    isConnected = uiState.isConnected,
+                    batteryPercent = uiState.batteryPercent,
+                    currentTime = uiState.currentTime,
+                    onExit = ::exit
+                )
 
-            if (WidgetKeys.CALLS in uiState.enabledWidgetKeys) {
-                CallWidget(incomingCall = incomingCall, modifier = Modifier.padding(top = 8.dp))
-            }
-
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
-                    RideModeSelector(
-                        selected = uiState.rideMode,
-                        onSelect = viewModel::onRideModeSelected,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                    LightControlRow(
-                        lightState = lightState,
-                        onToggleFront = viewModel::toggleFrontLight,
-                        onToggleRear = viewModel::toggleRearLight,
-                        onToggleBody = viewModel::toggleBodyLight,
-                        modifier = Modifier.padding(top = 10.dp)
-                    )
+                if (WidgetKeys.CALLS in uiState.enabledWidgetKeys) {
+                    CallWidget(incomingCall = incomingCall, modifier = Modifier.padding(top = 8.dp))
                 }
-            }
 
-            if (WidgetKeys.MUSIC in uiState.enabledWidgetKeys) {
-                if (viewModel.hasNotificationAccess()) {
-                    MusicWidget(
-                        state = musicState,
-                        onPlayPause = viewModel::musicPlayPause,
-                        onNext = viewModel::musicNext,
-                        onPrevious = viewModel::musicPrevious,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                    )
-                } else {
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                            .clickable {
-                                context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                            }
-                    ) {
-                        Text(
-                            "Enable Notification access to control music from here",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = LocalClusterPalette.current.textSecondary
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
+                        RideModeSelector(
+                            selected = uiState.rideMode,
+                            onSelect = viewModel::onRideModeSelected,
+                            modifier = Modifier.padding(top = 14.dp)
+                        )
+                        LightControlRow(
+                            lightState = lightState,
+                            onToggleFront = viewModel::toggleFrontLight,
+                            onToggleRear = viewModel::toggleRearLight,
+                            onToggleBody = viewModel::toggleBodyLight,
+                            modifier = Modifier.padding(top = 12.dp)
                         )
                     }
                 }
-            }
 
-            BottomInfoRow(
-                enabledWidgetKeys = uiState.enabledWidgetKeys,
-                distanceKm = uiState.distanceKm,
-                calories = uiState.calories,
-                cadenceRpm = uiState.cadenceRpm,
-                frontGear = uiState.frontGear,
-                rearGear = uiState.rearGear
-            )
+                if (WidgetKeys.MUSIC in uiState.enabledWidgetKeys) {
+                    if (viewModel.hasNotificationAccess()) {
+                        MusicWidget(
+                            state = musicState,
+                            onPlayPause = viewModel::musicPlayPause,
+                            onNext = viewModel::musicNext,
+                            onPrevious = viewModel::musicPrevious,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                        )
+                    } else {
+                        GlassCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .clickable {
+                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                }
+                        ) {
+                            Text(
+                                "Enable Notification access to control music from here",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = LocalClusterPalette.current.textSecondary
+                            )
+                        }
+                    }
+                }
+
+                BottomInfoRow(
+                    enabledWidgetKeys = uiState.enabledWidgetKeys,
+                    distanceKm = uiState.distanceKm,
+                    calories = uiState.calories,
+                    cadenceRpm = uiState.cadenceRpm,
+                    frontGear = uiState.frontGear,
+                    rearGear = uiState.rearGear
+                )
+            }
         }
     }
 }
@@ -173,9 +189,7 @@ private fun TopStatusRow(
     isConnected: Boolean,
     batteryPercent: Int,
     currentTime: String,
-    isRideActive: Boolean,
-    onToggleRide: () -> Unit,
-    onBack: () -> Unit
+    onExit: () -> Unit
 ) {
     val palette = LocalClusterPalette.current
     Row(
@@ -199,17 +213,10 @@ private fun TopStatusRow(
         }
         GlassCard { Text("$batteryPercent%", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary) }
         GlassCard { Text(currentTime, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary) }
-        GlassCard(modifier = Modifier.clickable(onClick = onToggleRide)) {
-            Text(
-                text = if (isRideActive) "■ Stop Ride" else "▶ Start Ride",
-                style = MaterialTheme.typography.labelSmall,
-                color = if (isRideActive) BikeDanger else palette.accent
-            )
-        }
-        // Top-right (landscape) - exits the cluster back to Home. Deliberately
-        // NOT a system-back-only affordance: riders with gloves/mounted
-        // phones need a visible tap target, not a gesture/hardware button.
-        GlassCard(modifier = Modifier.clickable(onClick = onBack)) {
+        // Top-right (landscape) - exits the cluster, saving the ride.
+        // Riders with gloves/mounted phones need a visible tap target,
+        // not just a gesture/hardware button (though that works too - see BackHandler).
+        GlassCard(modifier = Modifier.clickable(onClick = onExit)) {
             Text("✕ Exit", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
         }
     }

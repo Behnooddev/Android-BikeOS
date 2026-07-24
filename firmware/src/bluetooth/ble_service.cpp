@@ -1,5 +1,6 @@
 #include "ble_service.h"
 #include "ble_uuids.h"
+#include "../protocol/bikeos_protocol.h"
 #include <Arduino.h>
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -15,7 +16,7 @@
 namespace bikeos::ble {
 namespace {
     BLEServer* server = nullptr;
-    BLECharacteristic* sensorDataCharacteristic = nullptr; // also used to notify button events
+    BLECharacteristic* sensorDataCharacteristic = nullptr; // also used to notify button/alarm events
     BLECharacteristic* controlCommandCharacteristic = nullptr;
     bool deviceConnected = false;
 
@@ -43,13 +44,12 @@ namespace {
     void sendSensorData() {
         if (!deviceConnected || sensorDataCharacteristic == nullptr) return;
 
-        const uint8_t payloadLength = 5; // wheelRpm(2) + cadenceRpm(2) + battery(1)
-        uint8_t packet[6 + 5 + 1];
+        uint8_t packet[6 + BIKEOS_SENSOR_PAYLOAD_SIZE + 1];
 
         packet[0] = BIKEOS_MSG_TYPE_SENSOR_DATA;
         uint32_t timestampSec = (uint32_t)(millis() / 1000);
         memcpy(&packet[1], &timestampSec, sizeof(timestampSec));
-        packet[5] = payloadLength;
+        packet[5] = BIKEOS_SENSOR_PAYLOAD_SIZE;
 
         uint16_t wheelRpm = bikeos::sensors::getWheelRpm();
         uint16_t cadenceRpm = bikeos::sensors::getCadenceRpm();
@@ -64,7 +64,7 @@ namespace {
         memcpy(&packet[8], &cadenceRpm, sizeof(cadenceRpm));
         packet[10] = battery;
 
-        packet[11] = xorChecksum(packet, 11);
+        packet[sizeof(packet) - 1] = xorChecksum(packet, sizeof(packet) - 1);
 
         sensorDataCharacteristic->setValue(packet, sizeof(packet));
         sensorDataCharacteristic->notify();
@@ -79,13 +79,13 @@ namespace {
     void sendButtonEvent(uint8_t buttonId) {
         if (!deviceConnected || sensorDataCharacteristic == nullptr) return;
 
-        uint8_t packet[6 + 1 + 1];
+        uint8_t packet[6 + BIKEOS_BUTTON_EVENT_PAYLOAD_SIZE + 1];
         packet[0] = BIKEOS_MSG_TYPE_BUTTON_EVENT;
         uint32_t timestampSec = (uint32_t)(millis() / 1000);
         memcpy(&packet[1], &timestampSec, sizeof(timestampSec));
-        packet[5] = 1; // payload length
+        packet[5] = BIKEOS_BUTTON_EVENT_PAYLOAD_SIZE;
         packet[6] = buttonId;
-        packet[7] = xorChecksum(packet, 7);
+        packet[sizeof(packet) - 1] = xorChecksum(packet, sizeof(packet) - 1);
 
         sensorDataCharacteristic->setValue(packet, sizeof(packet));
         sensorDataCharacteristic->notify();
@@ -99,22 +99,21 @@ namespace {
     }
 
     /**
-     * One-byte Alarm Event packet (0x01 = triggered, 0x00 = cleared),
-     * again over the same Sensor Data characteristic. Sent once on each
-     * armed/disarmed... no - each triggered/cleared TRANSITION (edge-
+     * One-byte Alarm Event packet, again over the same Sensor Data
+     * characteristic. Sent once per triggered/cleared TRANSITION (edge-
      * triggered, like button events), not on every tick, so Android's
      * AlarmGuard dialog doesn't get spammed with duplicate notifications.
      */
     void sendAlarmEvent(bool isTriggered) {
         if (!deviceConnected || sensorDataCharacteristic == nullptr) return;
 
-        uint8_t packet[6 + 1 + 1];
+        uint8_t packet[6 + BIKEOS_ALARM_EVENT_PAYLOAD_SIZE + 1];
         packet[0] = BIKEOS_MSG_TYPE_ALARM_EVENT;
         uint32_t timestampSec = (uint32_t)(millis() / 1000);
         memcpy(&packet[1], &timestampSec, sizeof(timestampSec));
-        packet[5] = 1; // payload length
-        packet[6] = isTriggered ? 0x01 : 0x00;
-        packet[7] = xorChecksum(packet, 7);
+        packet[5] = BIKEOS_ALARM_EVENT_PAYLOAD_SIZE;
+        packet[6] = isTriggered ? BIKEOS_ALARM_EVENT_TRIGGERED : BIKEOS_ALARM_EVENT_CLEARED;
+        packet[sizeof(packet) - 1] = xorChecksum(packet, sizeof(packet) - 1);
 
         sensorDataCharacteristic->setValue(packet, sizeof(packet));
         sensorDataCharacteristic->notify();
@@ -142,11 +141,11 @@ namespace {
     };
 
     /**
-     * Validates incoming Control Service writes and now actually drives
-     * hardware for light commands. Mode/gear "update" commands are parsed
-     * and logged but don't change local state - Android is authoritative
-     * for both (see controls.h kdoc); RESET_DEVICE/SYNC_TIME are parsed
-     * but not yet acted on (no persistent RTC/config to reset/sync here).
+     * Validates incoming Control Service writes and drives hardware for
+     * light + alarm commands. Mode/gear "update" commands are parsed and
+     * logged but don't change local state - Android is authoritative for
+     * both (see controls.h kdoc); RESET_DEVICE/SYNC_TIME are parsed but
+     * not yet acted on (no persistent RTC/config to reset/sync here).
      */
     class ControlCommandCallbacks : public BLECharacteristicCallbacks {
         void onWrite(BLECharacteristic* characteristic) override {
@@ -179,14 +178,17 @@ namespace {
             uint8_t commandId = bytes[6];
 
             switch (commandId) {
-                case 0x01: bikeos::controls::setFrontLight(true);  break; // FRONT_LIGHT_ON
-                case 0x02: bikeos::controls::setFrontLight(false); break; // FRONT_LIGHT_OFF
-                case 0x03: bikeos::controls::setRearLight(true);   break; // REAR_LIGHT_ON
-                case 0x04: bikeos::controls::setRearLight(false);  break; // REAR_LIGHT_OFF
-                case 0x05: bikeos::controls::setBodyLight(true);   break; // BODY_LIGHT_ON
-                case 0x06: bikeos::controls::setBodyLight(false);  break; // BODY_LIGHT_OFF
-                case 0x40: bikeos::alarm::arm();    break; // ARM_ALARM
-                case 0x41: bikeos::alarm::disarm(); break; // DISARM_ALARM
+                case BIKEOS_CMD_FRONT_LIGHT_ON:  bikeos::controls::setFrontLight(true);  break;
+                case BIKEOS_CMD_FRONT_LIGHT_OFF: bikeos::controls::setFrontLight(false); break;
+                case BIKEOS_CMD_REAR_LIGHT_ON:   bikeos::controls::setRearLight(true);   break;
+                case BIKEOS_CMD_REAR_LIGHT_OFF:  bikeos::controls::setRearLight(false);  break;
+                case BIKEOS_CMD_BODY_LIGHT_ON:   bikeos::controls::setBodyLight(true);   break;
+                case BIKEOS_CMD_BODY_LIGHT_OFF:  bikeos::controls::setBodyLight(false);  break;
+                case BIKEOS_CMD_ARM_ALARM:       bikeos::alarm::arm();    break;
+                case BIKEOS_CMD_DISARM_ALARM:    bikeos::alarm::disarm(); break;
+                // SET_MODE_*/UPDATE_*_GEAR/REQUEST_STATUS/RESET_DEVICE/SYNC_TIME:
+                // parsed+validated above, intentionally no physical effect yet
+                // (see class kdoc) - falls through to the log line below.
                 default:
                     Serial.printf("[BLE] Control command 0x%02X received (no physical effect)\n", commandId);
                     break;
@@ -217,8 +219,8 @@ void init() {
 
     deviceInfoService->start();
 
-    // Sensor Data Service - notify (Sensor Data + Button Event packets both
-    // go out over this one characteristic; see sendButtonEvent() above).
+    // Sensor Data Service - notify (Sensor Data + Button Event + Alarm
+    // Event packets all go out over this one characteristic).
     BLEService* sensorService = server->createService(BIKEOS_SENSOR_DATA_SERVICE_UUID);
     sensorDataCharacteristic = sensorService->createCharacteristic(
         BIKEOS_SENSOR_DATA_CHARACTERISTIC_UUID,

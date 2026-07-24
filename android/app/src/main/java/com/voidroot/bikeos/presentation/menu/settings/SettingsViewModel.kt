@@ -12,6 +12,7 @@ import com.voidroot.bikeos.data.repository.BleRepository
 import com.voidroot.bikeos.data.repository.DashboardConfigRepository
 import com.voidroot.bikeos.data.repository.RideRepository
 import com.voidroot.bikeos.data.repository.SettingsRepository
+import com.voidroot.bikeos.data.repository.ThemeColorsRepository
 import com.voidroot.bikeos.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +32,8 @@ class SettingsViewModel @Inject constructor(
     private val userRepository: UserRepository,
     private val rideRepository: RideRepository,
     private val dashboardConfigRepository: DashboardConfigRepository,
-    private val appStateRepository: AppStateRepository
+    private val appStateRepository: AppStateRepository,
+    private val themeColorsRepository: ThemeColorsRepository
 ) : ViewModel() {
 
     private val _backupMessage = MutableStateFlow<String?>(null)
@@ -133,6 +135,7 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.clear()
             dashboardConfigRepository.clear()
             appStateRepository.clear()
+            themeColorsRepository.resetToDefault()
             onDone()
         }
     }
