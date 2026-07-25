@@ -13,8 +13,8 @@ android {
         applicationId = "com.voidroot.bikeos"
         minSdk = 29        // Android 10 - required for BLE feature set used by BikeOS
         targetSdk = 34
-        versionCode = 10
-        versionName = "0.10.0" // Protocol bug fix + UI/UX overhaul
+        versionCode = 11
+        versionName = "0.10.1" // Fix: invalid Flow.first() call syntax in ReminderWorker
     }
 
     buildFeatures {

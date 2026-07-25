@@ -1,7 +1,6 @@
 package com.voidroot.bikeos.data.notification
 
 import android.Manifest
-import kotlinx.coroutines.flow.first
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -13,6 +12,7 @@ import com.voidroot.bikeos.data.repository.AppStateRepository
 import com.voidroot.bikeos.data.repository.SettingsRepository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -45,7 +45,7 @@ class ReminderWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        val settings = kotlinx.coroutines.flow.first(settingsRepository.observe())
+        val settings = settingsRepository.observe().first()
         val appState = appStateRepository.get()
 
         if (!settings.reminderNotificationsEnabled) return Result.success()
