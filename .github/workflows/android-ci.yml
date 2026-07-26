@@ -1,0 +1,61 @@
+name: Android CI
+
+# NOTE: this repo's gradle/wrapper/gradle-wrapper.jar (binary) needs to be
+# generated once locally (`gradle wrapper --gradle-version 8.7` from
+# inside android/, or just open the project in Android Studio) and
+# committed before this workflow's `./gradlew` calls will succeed - see
+# the "Getting started" section of the root README.md.
+#
+# NOTE: this is a suggested starting workflow, added because an earlier
+# manual GitHub Actions run failed with:
+#   "sdk.dir property... Directory does not exist"
+# That happened because no step installed the Android SDK before Gradle
+# ran. `android-actions/setup-android` (below) handles that. If you
+# already have a working workflow file, compare against this one rather
+# than assuming this replaces it - merge whichever pieces you're missing.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'android/**'
+      - '.github/workflows/android-ci.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew :app:assembleDebug
+
+      - name: Run lint
+        working-directory: android
+        run: ./gradlew :app:lintDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bikeos-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk

@@ -52,4 +52,17 @@ object CalorieCalculator {
         val caloriesPerMinute = met * weightKg * 3.5f / 200f
         return caloriesPerMinute * (elapsedSeconds / 60f)
     }
+
+    /**
+     * Standalone estimate for the Calculator screen's Calories mode - no
+     * gear context needed there (the rider is just asking "roughly how
+     * many calories would a ride like this burn", not tracking a live
+     * ride), so this uses a neutral 1.0x gear multiplier.
+     */
+    fun estimateCalories(speedKmh: Float, weightKg: Int, durationMinutes: Float): Float {
+        if (weightKg <= 0 || durationMinutes <= 0f) return 0f
+        val met = metForSpeed(speedKmh)
+        val caloriesPerMinute = met * weightKg * 3.5f / 200f
+        return caloriesPerMinute * durationMinutes
+    }
 }

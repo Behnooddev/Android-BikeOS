@@ -1,0 +1,37 @@
+# ==== Android / Gradle ====
+android/*.iml
+android/.gradle/
+android/local.properties
+android/.idea/
+android/build/
+android/app/build/
+android/captures/
+android/.externalNativeBuild/
+android/.cxx/
+android/*.apk
+android/*.aab
+*.jks
+*.keystore
+android/app/schemas/
+
+# ==== PlatformIO / firmware ====
+firmware/.pio/
+firmware/.pioenvs/
+firmware/.piolibdeps/
+firmware/.vscode/.browse.c_cpp.db*
+firmware/.vscode/c_cpp_properties.json
+firmware/.vscode/launch.json
+firmware/.vscode/ipch/
+
+# ==== OS / editor cruft ====
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.iml
+
+# ==== Secrets - never commit these ====
+**/local.properties
+**/*.env
+**/secrets.properties
+**/google-services.json

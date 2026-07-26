@@ -1,0 +1,57 @@
+BikeOS Proprietary License
+
+Copyright (c) 2026 Behnood Shafiei / VoidRoot. All Rights Reserved.
+
+This software, including but not limited to the Android application
+source code, ESP32 firmware source code, associated documentation,
+designs, and assets (collectively, the "Software"), is the proprietary
+and confidential property of Behnood Shafiei and VoidRoot.
+
+1. GRANT OF RIGHTS
+   No rights, license, or permission of any kind are granted to any
+   person or entity to use, copy, modify, merge, publish, distribute,
+   sublicense, and/or sell copies of the Software, in whole or in part,
+   except as may be expressly authorized in writing by the copyright
+   holder.
+
+2. RESTRICTIONS
+   You may NOT, without prior written permission from the copyright
+   holder:
+     a. Copy, reproduce, or redistribute the Software in any form.
+     b. Modify, adapt, translate, or create derivative works based on
+        the Software.
+     c. Reverse engineer, decompile, or disassemble the Software, except
+        to the extent such restriction is expressly prohibited by
+        applicable law.
+     d. Use the Software, in whole or in part, for commercial purposes.
+     e. Remove or alter any copyright, trademark, or other proprietary
+        notices contained in the Software.
+
+3. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+   LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE - INCLUDING, WITHOUT LIMITATION, ANY HARDWARE MALFUNCTION,
+   RIDING INCIDENT, OR DATA LOSS ARISING FROM USE OF THIS PRODUCT ON A
+   BICYCLE OR OTHER VEHICLE.
+
+4. HARDWARE SAFETY NOTICE
+   BikeOS controls physical outputs (lights, an anti-theft buzzer) and
+   reads sensor data used for rider-facing information. This Software is
+   provided for hobbyist/personal use. It has not been certified for use
+   as a safety-critical or life-safety system. Do not rely on any
+   speed, distance, or alert reading from this Software as your sole
+   source of safety information while riding.
+
+5. THIRD-PARTY COMPONENTS
+   This Software depends on open-source third-party libraries (see
+   `android/app/build.gradle.kts` and `firmware/platformio.ini` for the
+   full list), each governed by its own respective license. This
+   proprietary license applies only to code and assets original to
+   BikeOS/VoidRoot, not to those third-party dependencies.
+
+For licensing inquiries, contact the copyright holder directly.

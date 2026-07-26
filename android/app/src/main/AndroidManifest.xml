@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- BLE permissions.
          neverForLocation on BLUETOOTH_SCAN: BikeOS never derives physical
@@ -43,7 +44,10 @@
             android:exported="true"
             android:theme="@style/Theme.BikeOS"
             android:screenOrientation="portrait">
-            <!-- Landscape locked: BikeOS is a handlebar-mounted cockpit display -->
+            <!-- Portrait by default - only the Dashboard/cluster and its
+                 boot sequence force landscape, programmatically, since
+                 that's the only screen meant to be viewed handlebar-
+                 mounted sideways. See core/common/LandscapeOnly.kt. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -61,5 +65,30 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- On-demand WorkManager initialization: BikeOSApplication implements
+             Configuration.Provider (supplies a HiltWorkerFactory so
+             ReminderWorker can be constructor-injected - see
+             BikeOSApplication.kt), so the library's own default
+             WorkManagerInitializer (which would build an unconfigured
+             WorkManager with no knowledge of Hilt-created workers) must be
+             removed from the merged manifest. This is the official AndroidX
+             Startup way to do that: override the WorkManagerInitializer
+             meta-data entry contributed by the work-runtime-ktx library's
+             manifest and mark it tools:node="remove" during manifest
+             merging. Removing this (instead of just disabling lint) is
+             required - lintVitalRelease fails release builds otherwise,
+             and the underlying issue (two competing WorkManager configs)
+             is real, not just a lint nag. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
     </application>
 </manifest>
