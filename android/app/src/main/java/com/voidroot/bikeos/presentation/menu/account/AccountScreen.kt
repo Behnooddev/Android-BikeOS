@@ -34,7 +34,7 @@ import com.voidroot.bikeos.core.theme.BikeBackground
 import com.voidroot.bikeos.core.theme.BikePrimary
 import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
-import com.voidroot.bikeos.presentation.common.MenuScreenHeader
+import com.voidroot.bikeos.presentation.common.BikeOSMenuScaffold
 
 /**
  * Profile edit screen - same fields collected at signup (minus password,
@@ -47,6 +47,7 @@ fun AccountScreen(navController: NavHostController, viewModel: AccountViewModel 
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val saved by viewModel.saved.collectAsStateWithLifecycle()
 
+    BikeOSMenuScaffold(navController, "Profile") {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,8 +55,6 @@ fun AccountScreen(navController: NavHostController, viewModel: AccountViewModel 
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        MenuScreenHeader("Profile", navController)
-
         Row(verticalAlignment = Alignment.CenterVertically) {
             val initials = (profile.firstName.firstOrNull()?.toString() ?: "") +
                 (profile.lastName.firstOrNull()?.toString() ?: "")
@@ -158,5 +157,6 @@ fun AccountScreen(navController: NavHostController, viewModel: AccountViewModel 
         if (saved) {
             Text("Profile saved locally.", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
         }
+    }
     }
 }

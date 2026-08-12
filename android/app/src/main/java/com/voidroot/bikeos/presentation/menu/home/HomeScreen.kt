@@ -34,7 +34,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,7 +48,7 @@ import com.voidroot.bikeos.core.theme.BikeBackground
 import com.voidroot.bikeos.core.theme.BikePrimary
 import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
-import com.voidroot.bikeos.presentation.common.AppMenuButton
+import com.voidroot.bikeos.presentation.common.BikeOSMenuScaffold
 
 /**
  * The permanent landing screen from the second app open onward (Splash
@@ -86,31 +88,24 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = hilt
         label = "glowAlpha"
     )
 
+    BikeOSMenuScaffold(navController, "BikeOS") {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(BikeBackground, BikeBackground.copy(alpha = 0.85f))))
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AppMenuButton(navController)
-            Text("BikeOS", style = MaterialTheme.typography.titleMedium, color = BikeTextSecondary)
-            Box(modifier = Modifier.padding(end = 12.dp)) {} // balances the row so the title stays visually centered
-        }
-
         Column(
             modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = uiState.greetingMessage,
-                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
                 color = BikeTextPrimary,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 36.dp)
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(top = 36.dp)
             )
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -162,5 +157,6 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = hilt
                 }
             }
         }
+    }
     }
 }

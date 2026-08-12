@@ -5,6 +5,11 @@
 // implemented yet, this module only exposes what the alarm system needs
 // today. Extend getX/Y/Z or add a dedicated slope function later without
 // needing to change the alarm code.
+//
+// Phase J: the reading path (Adafruit library's calibrated output vs raw
+// register reads + rolling average) is selected at compile time via
+// config/sensor_backend_config.h - getAccelMagnitude()/isReady() behave
+// identically either way, so alarm.cpp never needs to know which is active.
 
 #include <cstdint>
 

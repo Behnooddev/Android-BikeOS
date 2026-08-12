@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -126,13 +127,19 @@ fun DashboardScreen(
                     CallWidget(incomingCall = incomingCall, modifier = Modifier.padding(top = 8.dp))
                 }
 
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
+                    Column(
+                        horizontalAlignment = Alignment.Start,
+                        modifier = Modifier.padding(start = 24.dp).widthIn(max = 280.dp)
+                    ) {
                         RideModeSelector(
                             selected = uiState.rideMode,
-                            onSelect = viewModel::onRideModeSelected,
-                            modifier = Modifier.padding(top = 14.dp)
+                            onSelect = viewModel::onRideModeSelected
                         )
                         LightControlRow(
                             lightState = lightState,

@@ -4,6 +4,54 @@ All notable changes to BikeOS, in order. Versions correspond to
 `android/app/build.gradle.kts`'s `versionName`. See `docs/` for the full
 detailed write-up behind any entry below.
 
+## [0.13.0] - Phase J: alternate sensor backends
+### Added
+- `firmware/src/config/sensor_backend_config.h` - compile-time `#define`
+  switches to pick between VL53L1X/HC-SR04 (rear distance), library/raw-
+  averaging MPU6050 (motion), and digital-DO/analog-AO + active-high/low
+  Hall (wheel/cadence). Defaults match the original confirmed hardware.
+- HC-SR04 ultrasonic backend for rear distance (`pulseIn()` timing),
+  behind the same `getRearDistanceMm()`/`isRearSensorReady()` interface
+  as VL53L1X.
+- Raw-register MPU6050 reading path with rolling-average smoothing
+  (`motion.cpp`), bypassing the Adafruit library entirely - for
+  suspected counterfeit/inaccurate MPU6050 units.
+- Analog-AO polling path for Hall wheel/cadence sensors (threshold-
+  compared, debounced the same as the digital ISR path), plus an
+  independent active-high/active-low polarity switch usable with either
+  Hall mode.
+- `docs/21_PHASE_J_SUMMARY.md`, `docs/18_WIRING_GUIDE.md` "Alternate
+  hardware" section.
+### Note
+- Not build-verified against real HC-SR04/clone-MPU6050/AO-Hall hardware
+  (no PlatformIO toolchain in this sandbox) - see
+  `docs/21_PHASE_J_SUMMARY.md` for what still needs bring-up tuning
+  (notably `HALL_AO_THRESHOLD`).
+
+## [0.12.0] - UI bug-fix pass: full-height drawer menu
+### Changed
+- Replaced the old small `DropdownMenu` (`AppMenu.kt` /
+  `MenuScreenHeader.kt`) with a real full-height side drawer
+  (`BikeOSDrawer.kt` + `BikeOSMenuScaffold.kt`), matching the previous
+  app "Lumen"'s navigation pattern. All 6 menu screens (Home, Calculator,
+  About, Settings, Account/Profile, Appearance) now use
+  `BikeOSMenuScaffold`.
+- Home screen's greeting text no longer overflows off-screen
+  (`fillMaxWidth()`, smaller font, `maxLines=3` + ellipsis safety net).
+- Dashboard cluster's middle section (gauge + ride mode chips + light
+  toggles) restructured from a `Column` into a `Row` so it fits inside
+  landscape's limited height without hiding the mode selector; `SpeedGauge`
+  shrunk from 280dp/260dp to 220dp/200dp; `RideModeSelector` got a
+  horizontal-scroll safety net + width constraint.
+### Removed
+- Dead files `presentation/common/AppMenu.kt` and
+  `presentation/common/MenuScreenHeader.kt` (superseded by
+  `BikeOSMenuScaffold`; confirmed no remaining imports before deletion).
+### Note
+- Not yet visually verified on a real device/emulator (no Android
+  environment available in this sandbox) - drawer spacing, gradient
+  header, and 280dp width may need adjustment once actually seen.
+
 ## [0.11.0] - Phase F
 ### Added
 - Real Calculator screen: Speed/Distance/Time solver, Gear Ratio

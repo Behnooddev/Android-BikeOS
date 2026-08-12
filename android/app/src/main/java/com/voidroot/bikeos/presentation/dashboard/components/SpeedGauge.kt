@@ -51,9 +51,9 @@ fun SpeedGauge(
         label = "speedNumber"
     )
 
-    Box(modifier = modifier.size(280.dp), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.size(220.dp), contentAlignment = Alignment.Center) {
         // Soft ambient glow behind the gauge - purely decorative depth.
-        Canvas(modifier = Modifier.size(280.dp)) {
+        Canvas(modifier = Modifier.size(220.dp)) {
             drawCircle(
                 brush = Brush.radialGradient(
                     listOf(palette.primary.copy(alpha = 0.10f), palette.primary.copy(alpha = 0f))
@@ -62,8 +62,8 @@ fun SpeedGauge(
             )
         }
 
-        Canvas(modifier = Modifier.size(260.dp)) {
-            val strokeWidth = 22.dp.toPx()
+        Canvas(modifier = Modifier.size(200.dp)) {
+            val strokeWidth = 18.dp.toPx()
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
             val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
             val startAngle = 135f

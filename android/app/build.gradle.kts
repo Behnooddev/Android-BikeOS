@@ -13,8 +13,8 @@ android {
         applicationId = "com.voidroot.bikeos"
         minSdk = 29        // Android 10 - required for BLE feature set used by BikeOS
         targetSdk = 34
-        versionCode = 13
-        versionName = "0.11.0" // Phase F - Real Calculator (speed/distance/time, gear ratio, calories)
+        versionCode = 14
+        versionName = "0.12.0" // UI bug-fix pass - full-height drawer menu on all 6 screens
     }
 
     buildFeatures {

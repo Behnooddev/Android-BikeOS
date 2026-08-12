@@ -2,9 +2,9 @@
 # These owners will be requested for review whenever a pull request touches
 # matching files.
 
-*                       @behnooddev
+*                       @behnoodshafiei
 
 # BLE protocol changes are the highest-risk category in this repo (must be
 # kept in sync on both sides - see CONTRIBUTING.md) - flagged explicitly.
-/firmware/src/protocol/  @behnooddev
-/android/app/src/main/java/com/voidroot/bikeos/data/ble/  @behnooddev
+/firmware/src/protocol/  @behnoodshafiei
+/android/app/src/main/java/com/voidroot/bikeos/data/ble/  @behnoodshafiei

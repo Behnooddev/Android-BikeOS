@@ -31,7 +31,7 @@ import com.voidroot.bikeos.core.theme.BikeDanger
 import com.voidroot.bikeos.core.theme.BikePrimary
 import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
-import com.voidroot.bikeos.presentation.common.MenuScreenHeader
+import com.voidroot.bikeos.presentation.common.BikeOSMenuScaffold
 
 /**
  * A bike-specific calculator: pick what to calculate, fill in the inputs
@@ -43,52 +43,52 @@ import com.voidroot.bikeos.presentation.common.MenuScreenHeader
 fun CalculatorScreen(navController: NavHostController, viewModel: CalculatorViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        MenuScreenHeader("Calculator", navController)
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CalculatorMode.entries.forEach { mode ->
-                val isSelected = mode == state.mode
-                Text(
-                    text = mode.label,
-                    style = if (isSelected) MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) BikeTextPrimary else BikeTextSecondary,
-                    modifier = Modifier
-                        .background(if (isSelected) BikeAccent.copy(alpha = 0.25f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(50))
-                        .clickable { viewModel.setMode(mode) }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                )
-            }
-        }
-
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                when (state.mode) {
-                    CalculatorMode.SPEED_DISTANCE_TIME -> SpeedDistanceTimeInputs(state, viewModel)
-                    CalculatorMode.GEAR_RATIO -> GearRatioInputs(state, viewModel)
-                    CalculatorMode.CALORIES -> CaloriesInputs(state, viewModel)
-                }
-
-                Button(onClick = viewModel::calculate, modifier = Modifier.fillMaxWidth()) {
-                    Text("Calculate")
+    BikeOSMenuScaffold(navController, "Calculator") {
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CalculatorMode.entries.forEach { mode ->
+                    val isSelected = mode == state.mode
+                    Text(
+                        text = mode.label,
+                        style = if (isSelected) MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold) else MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) BikeTextPrimary else BikeTextSecondary,
+                        modifier = Modifier
+                            .background(if (isSelected) BikeAccent.copy(alpha = 0.25f) else androidx.compose.ui.graphics.Color.Transparent, RoundedCornerShape(50))
+                            .clickable { viewModel.setMode(mode) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    )
                 }
             }
-        }
 
-        state.errorMessage?.let {
-            Text(it, color = BikeDanger, style = MaterialTheme.typography.labelSmall)
-        }
-
-        if (state.resultValue != null) {
             GlassCard(modifier = Modifier.fillMaxWidth()) {
-                Column {
-                    Text(state.resultTitle ?: "", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
-                    Text(state.resultValue ?: "", style = MaterialTheme.typography.headlineMedium, color = BikePrimary)
-                    state.reaction?.let {
-                        Text(it, style = MaterialTheme.typography.bodyMedium, color = BikeTextPrimary, modifier = Modifier.padding(top = 6.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    when (state.mode) {
+                        CalculatorMode.SPEED_DISTANCE_TIME -> SpeedDistanceTimeInputs(state, viewModel)
+                        CalculatorMode.GEAR_RATIO -> GearRatioInputs(state, viewModel)
+                        CalculatorMode.CALORIES -> CaloriesInputs(state, viewModel)
+                    }
+
+                    Button(onClick = viewModel::calculate, modifier = Modifier.fillMaxWidth()) {
+                        Text("Calculate")
+                    }
+                }
+            }
+
+            state.errorMessage?.let {
+                Text(it, color = BikeDanger, style = MaterialTheme.typography.labelSmall)
+            }
+
+            if (state.resultValue != null) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column {
+                        Text(state.resultTitle ?: "", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
+                        Text(state.resultValue ?: "", style = MaterialTheme.typography.headlineMedium, color = BikePrimary)
+                        state.reaction?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = BikeTextPrimary, modifier = Modifier.padding(top = 6.dp))
+                        }
                     }
                 }
             }

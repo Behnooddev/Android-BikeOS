@@ -32,7 +32,7 @@ import androidx.navigation.NavHostController
 import com.voidroot.bikeos.core.common.GlassCard
 import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
-import com.voidroot.bikeos.presentation.common.MenuScreenHeader
+import com.voidroot.bikeos.presentation.common.BikeOSMenuScaffold
 
 /**
  * Dashboard widget enable/disable toggles + per-role Day/Night cluster
@@ -45,12 +45,11 @@ fun AppearanceScreen(navController: NavHostController, viewModel: AppearanceView
     val themeColors by viewModel.themeColors.collectAsStateWithLifecycle()
     var selectedMode by remember { mutableStateOf(DayNightMode.NIGHT) }
 
+    BikeOSMenuScaffold(navController, "Appearance") {
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        MenuScreenHeader("Appearance", navController)
-
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Dashboard Widgets", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = BikeTextPrimary)
@@ -110,5 +109,6 @@ fun AppearanceScreen(navController: NavHostController, viewModel: AppearanceView
                 }
             }
         }
+    }
     }
 }

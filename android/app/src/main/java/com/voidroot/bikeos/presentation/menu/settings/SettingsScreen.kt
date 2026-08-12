@@ -54,7 +54,7 @@ import com.voidroot.bikeos.core.theme.BikeSuccess
 import com.voidroot.bikeos.core.theme.BikeTextPrimary
 import com.voidroot.bikeos.core.theme.BikeTextSecondary
 import com.voidroot.bikeos.data.ble.BleConnectionState
-import com.voidroot.bikeos.presentation.common.MenuScreenHeader
+import com.voidroot.bikeos.presentation.common.BikeOSMenuScaffold
 
 /**
  * Settings, redesigned as grouped cards (one GlassCard per topic, each
@@ -84,6 +84,7 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
         if (results.values.all { it }) viewModel.connectDevice()
     }
 
+    BikeOSMenuScaffold(navController, "Settings") {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,8 +92,6 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        MenuScreenHeader("Settings", navController)
-
         SettingsSection(title = "Theme & Display", icon = Icons.Filled.Palette) {
             SettingsToggleRow("Dark theme", "Off switches to a light appearance", uiState.settings.isDarkTheme, viewModel::setDarkTheme)
             SettingsToggleRow("24-hour clock", "Off shows 12-hour time", uiState.settings.use24HourClock, viewModel::setUse24HourClock)
@@ -250,6 +249,7 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
                 TextButton(onClick = { showEraseConfirm = false }) { Text("Cancel") }
             }
         )
+    }
     }
 }
 
