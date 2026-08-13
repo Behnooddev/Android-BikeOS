@@ -5,6 +5,17 @@ All notable changes to BikeOS, in order. Versions correspond to
 detailed write-up behind any entry below.
 
 ## [0.14.1] - Visual overhaul: Home + Dashboard restyled to match new cockpit design references
+### Fixed
+- `DashboardViewModel.kt` - real compiler error from the first Actions
+  build after this pass (`Smart cast to 'Float' is impossible, because
+  'accumulator.lastAccelG' is a complex expression`, line 217): reading a
+  `var` property (`accumulator`) twice in one expression (null-check then
+  use) isn't smart-castable since the compiler can't prove `accumulator`
+  didn't change in between. Captured `accumulator.lastAccelG` into a
+  local `val` once, then null-checked/used that instead - pre-existing
+  Phase H code, unrelated to this pass's UI changes, but this was the
+  first real build attempt since Phase H landed so it's the first time
+  it surfaced.
 ### Changed
 - No new features, no logic changes - a pure visual pass matching two
   design references the builder supplied (a landscape cockpit layout and

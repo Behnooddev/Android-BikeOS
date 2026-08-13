@@ -213,8 +213,9 @@ class DashboardViewModel @Inject constructor(
                     // accelG is the honest 0f sentinel while disconnected
                     // (see SensorSnapshot kdoc), which would otherwise
                     // register as a huge fake "jerk" the moment BLE drops.
-                    val jerk = if (snapshot.isConnected && accumulator.lastAccelG != null) {
-                        kotlin.math.abs(snapshot.accelG - accumulator.lastAccelG)
+                    val lastAccelG = accumulator.lastAccelG
+                    val jerk = if (snapshot.isConnected && lastAccelG != null) {
+                        kotlin.math.abs(snapshot.accelG - lastAccelG)
                     } else {
                         null
                     }
