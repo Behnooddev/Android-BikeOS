@@ -11,12 +11,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -127,65 +133,70 @@ fun DashboardScreen(
                     CallWidget(incomingCall = incomingCall, modifier = Modifier.padding(top = 8.dp))
                 }
 
+                // Main cockpit body: stat column (left) - gauge/modes/music (center) - light controls (right).
                 Row(
                     modifier = Modifier.fillMaxWidth().weight(1f),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
+                    StatColumn(
+                        modifier = Modifier.width(150.dp).fillMaxHeight(),
+                        enabledWidgetKeys = uiState.enabledWidgetKeys,
+                        distanceKm = uiState.distanceKm,
+                        calories = uiState.calories,
+                        cadenceRpm = uiState.cadenceRpm,
+                        frontGear = uiState.frontGear,
+                        rearGear = uiState.rearGear,
+                        gearSuggestionLabel = uiState.gearSuggestionLabel
+                    )
+
                     Column(
-                        horizontalAlignment = Alignment.Start,
-                        modifier = Modifier.padding(start = 24.dp).widthIn(max = 280.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp)
                     ) {
+                        SpeedGauge(speedKmh = uiState.speedKmh, maxSpeedKmh = uiState.maxSpeedKmh)
                         RideModeSelector(
                             selected = uiState.rideMode,
-                            onSelect = viewModel::onRideModeSelected
+                            onSelect = viewModel::onRideModeSelected,
+                            modifier = Modifier.padding(top = 16.dp).widthIn(max = 340.dp)
                         )
-                        LightControlRow(
-                            lightState = lightState,
-                            onToggleFront = viewModel::toggleFrontLight,
-                            onToggleRear = viewModel::toggleRearLight,
-                            onToggleBody = viewModel::toggleBodyLight,
-                            modifier = Modifier.padding(top = 12.dp)
-                        )
-                    }
-                }
 
-                if (WidgetKeys.MUSIC in uiState.enabledWidgetKeys) {
-                    if (viewModel.hasNotificationAccess()) {
-                        MusicWidget(
-                            state = musicState,
-                            onPlayPause = viewModel::musicPlayPause,
-                            onNext = viewModel::musicNext,
-                            onPrevious = viewModel::musicPrevious,
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                        )
-                    } else {
-                        GlassCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .clickable {
-                                    context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                        if (WidgetKeys.MUSIC in uiState.enabledWidgetKeys) {
+                            if (viewModel.hasNotificationAccess()) {
+                                MusicWidget(
+                                    state = musicState,
+                                    onPlayPause = viewModel::musicPlayPause,
+                                    onNext = viewModel::musicNext,
+                                    onPrevious = viewModel::musicPrevious,
+                                    modifier = Modifier.fillMaxWidth().widthIn(max = 340.dp).padding(top = 14.dp)
+                                )
+                            } else {
+                                GlassCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .widthIn(max = 340.dp)
+                                        .padding(top = 14.dp)
+                                        .clickable {
+                                            context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                        }
+                                ) {
+                                    Text(
+                                        "Enable Notification access to control music from here",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = LocalClusterPalette.current.textSecondary
+                                    )
                                 }
-                        ) {
-                            Text(
-                                "Enable Notification access to control music from here",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = LocalClusterPalette.current.textSecondary
-                            )
+                            }
                         }
                     }
-                }
 
-                BottomInfoRow(
-                    enabledWidgetKeys = uiState.enabledWidgetKeys,
-                    distanceKm = uiState.distanceKm,
-                    calories = uiState.calories,
-                    cadenceRpm = uiState.cadenceRpm,
-                    frontGear = uiState.frontGear,
-                    rearGear = uiState.rearGear
-                )
+                    LightControlRow(
+                        lightState = lightState,
+                        onToggleFront = viewModel::toggleFrontLight,
+                        onToggleRear = viewModel::toggleRearLight,
+                        onToggleBody = viewModel::toggleBodyLight
+                    )
+                }
             }
         }
     }
@@ -218,33 +229,50 @@ private fun TopStatusRow(
                 )
             }
         }
-        GlassCard { Text("$batteryPercent%", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary) }
-        GlassCard { Text(currentTime, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary) }
+        GlassCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.BatteryFull,
+                    contentDescription = null,
+                    tint = palette.textSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text("  $batteryPercent%", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
+            }
+        }
+        GlassCard { Text(currentTime, style = MaterialTheme.typography.labelSmall, color = palette.primary) }
         // Top-right (landscape) - exits the cluster, saving the ride.
         // Riders with gloves/mounted phones need a visible tap target,
         // not just a gesture/hardware button (though that works too - see BackHandler).
         GlassCard(modifier = Modifier.clickable(onClick = onExit)) {
-            Text("✕ Exit", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("EXIT  ", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = "Exit",
+                    tint = palette.textSecondary,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun BottomInfoRow(
+private fun StatColumn(
     enabledWidgetKeys: Set<String>,
     distanceKm: Float,
     calories: Int,
     cadenceRpm: Int,
     frontGear: Int,
-    rearGear: Int
+    rearGear: Int,
+    gearSuggestionLabel: String,
+    modifier: Modifier = Modifier
 ) {
     val palette = LocalClusterPalette.current
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (WidgetKeys.DISTANCE in enabledWidgetKeys) {
-            GlassCard {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text("Distance", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
                     Text(
@@ -256,7 +284,7 @@ private fun BottomInfoRow(
             }
         }
         if (WidgetKeys.CALORIES in enabledWidgetKeys) {
-            GlassCard {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text("Calories", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
                     Text("$calories kcal", style = MaterialTheme.typography.titleMedium, color = palette.textPrimary)
@@ -264,7 +292,7 @@ private fun BottomInfoRow(
             }
         }
         if (WidgetKeys.CADENCE in enabledWidgetKeys) {
-            GlassCard {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text("Cadence", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
                     Text("$cadenceRpm rpm", style = MaterialTheme.typography.titleMedium, color = palette.textPrimary)
@@ -272,12 +300,16 @@ private fun BottomInfoRow(
             }
         }
         if (WidgetKeys.GEAR in enabledWidgetKeys) {
-            GlassCard {
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     Text("Gear", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
                     Text("$frontGear x $rearGear", style = MaterialTheme.typography.titleMedium, color = palette.textPrimary)
+                    if (gearSuggestionLabel.isNotBlank()) {
+                        Text(gearSuggestionLabel, style = MaterialTheme.typography.labelSmall, color = palette.accent)
+                    }
                 }
             }
         }
     }
 }
+

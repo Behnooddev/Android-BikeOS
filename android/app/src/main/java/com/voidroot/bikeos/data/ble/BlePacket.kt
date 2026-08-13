@@ -29,11 +29,16 @@ import java.nio.ByteOrder
  *
  * [batteryPercent] is 0 when the firmware's INA219 isn't ready yet -
  * callers should treat 0 as "unknown", not "empty".
+ *
+ * [accelG] (protocol 1.2, Phase H) is the MPU6050 acceleration vector
+ * magnitude in g (~1.0g at rest). Feeds real riding-style analysis - see
+ * [com.voidroot.bikeos.presentation.menu.home.HomeViewModel].
  */
 data class SensorPayload(
     val wheelRpm: Int,
     val cadenceRpm: Int,
-    val batteryPercent: Int
+    val batteryPercent: Int,
+    val accelG: Float
 )
 
 /** A handlebar button press forwarded from the ESP32 - see controls.h on the firmware side for why these are events, not state. */
@@ -88,7 +93,7 @@ object BlePacket {
     const val TYPE_ERROR = 0xFF
 
     private const val HEADER_SIZE = 6 // messageType(1) + timestamp(4) + payloadLength(1)
-    private const val SENSOR_PAYLOAD_SIZE = 5 // wheelRpm(2) + cadenceRpm(2) + battery(1)
+    private const val SENSOR_PAYLOAD_SIZE = 7 // wheelRpm(2) + cadenceRpm(2) + battery(1) + accelMilliG(2) - protocol 1.2
     private const val BUTTON_EVENT_PAYLOAD_SIZE = 1
     private const val ALARM_EVENT_PAYLOAD_SIZE = 1
 
@@ -123,7 +128,8 @@ object BlePacket {
                 val wheelRpm = buffer.short.toInt() and 0xFFFF
                 val cadenceRpm = buffer.short.toInt() and 0xFFFF
                 val batteryPercent = buffer.get().toInt() and 0xFF
-                DecodedNotification.SensorData(SensorPayload(wheelRpm, cadenceRpm, batteryPercent))
+                val accelMilliG = buffer.short.toInt() and 0xFFFF
+                DecodedNotification.SensorData(SensorPayload(wheelRpm, cadenceRpm, batteryPercent, accelMilliG / 1000f))
             }
             TYPE_BUTTON_EVENT -> {
                 if (payloadLength != BUTTON_EVENT_PAYLOAD_SIZE) return null

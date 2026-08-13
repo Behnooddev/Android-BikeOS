@@ -63,7 +63,10 @@ fun SpeedGauge(
         }
 
         Canvas(modifier = Modifier.size(200.dp)) {
-            val strokeWidth = 18.dp.toPx()
+            // Thin, high-precision arc (per the "aviation instrument" direction)
+            // rather than a thick filled band - a soft outer glow (below) does
+            // the work a thicker stroke used to do, without looking heavy.
+            val strokeWidth = 6.dp.toPx()
             val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
             val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
             val startAngle = 135f
@@ -80,27 +83,20 @@ fun SpeedGauge(
                 size = arcSize
             )
 
+            // Soft glow pass just behind the precision line - subtle depth
+            // without thickening the arc itself.
             drawArc(
-                color = palette.primary.copy(alpha = 0.12f),
+                color = palette.primary.copy(alpha = 0.20f),
                 startAngle = startAngle,
                 sweepAngle = fillSweep,
                 useCenter = false,
-                style = Stroke(width = strokeWidth + 18f, cap = StrokeCap.Round),
-                topLeft = topLeft,
-                size = arcSize
-            )
-            drawArc(
-                color = palette.primary.copy(alpha = 0.25f),
-                startAngle = startAngle,
-                sweepAngle = fillSweep,
-                useCenter = false,
-                style = Stroke(width = strokeWidth + 8f, cap = StrokeCap.Round),
+                style = Stroke(width = strokeWidth + 10f, cap = StrokeCap.Round),
                 topLeft = topLeft,
                 size = arcSize
             )
 
             drawArc(
-                brush = Brush.sweepGradient(listOf(palette.primary, palette.accent, palette.primary)),
+                brush = Brush.sweepGradient(listOf(palette.accent, palette.primary, palette.primary)),
                 startAngle = startAngle,
                 sweepAngle = fillSweep,
                 useCenter = false,

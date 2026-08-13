@@ -27,7 +27,9 @@ data class SensorSnapshot(
     val cadenceRpm: Int = 0,
     val batteryPercent: Int = 0,
     val isConnected: Boolean = false,
-    val currentTime: String = "--:--"
+    val currentTime: String = "--:--",
+    /** MPU6050 accel magnitude in g (~1.0g at rest). 0f while disconnected - same "0 = no data" convention as every other field here (0g is not a physically real at-rest reading, so it's an unambiguous sentinel). Protocol 1.2 / Phase H. */
+    val accelG: Float = 0f
 )
 
 /**
@@ -88,7 +90,8 @@ class SensorRepository @Inject constructor(
                 cadenceRpm = payload.cadenceRpm,
                 batteryPercent = payload.batteryPercent,
                 isConnected = true,
-                currentTime = timeFormat.format(Date())
+                currentTime = timeFormat.format(Date()),
+                accelG = payload.accelG
             )
         }
     }

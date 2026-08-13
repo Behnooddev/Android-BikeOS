@@ -12,6 +12,7 @@
 #include "../controls/controls.h"
 #include "../power/power.h"
 #include "../alarm/alarm.h"
+#include "../motion/motion.h"
 
 namespace bikeos::ble {
 namespace {
@@ -32,12 +33,19 @@ namespace {
 
     /**
      * Builds and sends one Sensor Data packet from REAL sensor readings:
-     * [type:1][timestampSec:4 LE][payloadLen:1][wheelRpm:2][cadenceRpm:2][battery:1][checksum:1]
+     * [type:1][timestampSec:4 LE][payloadLen:1][wheelRpm:2][cadenceRpm:2][battery:1][accelMilliG:2][checksum:1]
      *
      * Speed/distance are NOT sent - the firmware doesn't know wheel
      * circumference (that's bike-profile data Android owns). Android
      * converts wheelRpm to speed/distance itself. See sensors.h kdoc and
      * SensorRepository.kt for the full reasoning.
+     *
+     * accelMilliG (Phase H, protocol 1.2): motion::getAccelMagnitude() in
+     * milli-g, sent even if motion::isReady() is false (in which case it's
+     * the module's built-in at-rest default of 1.0g/1000 - Android already
+     * treats "no BLE connection at all" as its zero-sentinel for every
+     * field via isConnected=false, this doesn't need its own out-of-band
+     * sentinel on top of that).
      *
      * Layout MUST match BlePacket.decode()'s SENSOR_DATA branch on the Android side.
      */
@@ -59,10 +67,16 @@ namespace {
         uint8_t battery = bikeos::power::isPowerSensorReady()
             ? bikeos::power::getBatteryPercent()
             : 0;
+        // g -> milli-g, clamped to uint16 range (65.535g - already far
+        // beyond anything the alarm's crash/theft detection cares about,
+        // this clamp just prevents wraparound on a wild sensor glitch).
+        float accelG = bikeos::motion::getAccelMagnitude();
+        uint16_t accelMilliG = (uint16_t)constrain(accelG * 1000.0f, 0.0f, 65535.0f);
 
         memcpy(&packet[6], &wheelRpm, sizeof(wheelRpm));
         memcpy(&packet[8], &cadenceRpm, sizeof(cadenceRpm));
         packet[10] = battery;
+        memcpy(&packet[11], &accelMilliG, sizeof(accelMilliG));
 
         packet[sizeof(packet) - 1] = xorChecksum(packet, sizeof(packet) - 1);
 

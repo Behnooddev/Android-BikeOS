@@ -152,7 +152,7 @@ our previous app 'Lumen', not a small dropdown."*
 | G (wiring guide + GitHub files) | ✅ Done |
 | **UI bug-fix pass (mode selector, greeting, menu drawer)** | ✅ Done - not yet visually verified on a device |
 | **J (alternate sensor backends)** | ✅ Done - not build-verified, see below |
-| H (smart features) | ⏳ Not started |
+| **H (gear suggestions + riding analytics)** | 🔶 2/3 done - not build-verified, see below |
 | I (final UI polish, reserved for last) | ⏳ Not started |
 
 ### Phase J - alternative sensor code (DONE)
@@ -198,12 +198,42 @@ added or changed).
   real AO module during bring-up.
 - No runtime auto-detection was built (wasn't requested).
 
-### Phase H (not started)
-Gear suggestion algorithm (using cadence/speed/slope), advanced ride
-analytics (real MPU-based riding-style analysis, replacing the current
-simple max/avg-speed-ratio heuristic in `HomeViewModel.ridingStyleFrom()`),
-and a "keyless starter" hardware concept (mentioned by the builder as a
-future idea, no spec yet - ask for details when reached).
+### Phase H (2/3 done)
+
+Builder said "continue" (delegated exact scope to the assistant's
+judgment) when asked which pieces to tackle. Full write-up:
+`docs/22_PHASE_H_SUMMARY.md`.
+
+**Done:**
+1. **Gear suggestion algorithm** - `core/health/GearSuggestionEngine.kt`,
+   cadence-band-based (70-90rpm target), gear-index-aware using the
+   synced bike profile (no gear-position sensor exists, so this suggests
+   a direction - easier/harder - not an exact gear). Wired into
+   `DashboardViewModel`/`DashboardScreen`, respects the
+   `gearSuggestionsEnabled` Settings toggle (existed in the schema
+   already but was never connected to anything until now).
+2. **Real MPU-based riding-style analysis** - required a genuine BLE
+   protocol change (1.1 -> 1.2), done per CONTRIBUTING.md's golden rule:
+   `bikeos_protocol.h` + `BlePacket.kt` + `ble_service.cpp` all updated
+   together to add `accelMilliG` to the Sensor Data payload (5 -> 7
+   bytes). `DashboardViewModel` now tracks a live "jerk" (frame-to-frame
+   accel change) aggregate per ride, saved as `avgAccelJerkG` via a new
+   Room migration (schema 2 -> 3). `HomeViewModel.ridingStyleFrom()` now
+   prefers the real accel-based classifier when enough rides have real
+   data, falling back to the old speed-burstiness heuristic for older
+   rides. Firmware version 0.5.0 -> 0.6.0, Android versionCode 14 -> 15
+   (0.12.0 -> 0.14.0 - note 0.13.0 was firmware-only, Phase J).
+
+**Still NOT done:**
+- Not build/runtime-verified (no PlatformIO/Gradle/Android runtime in
+  this sandbox) - the Room migration especially should be sanity-checked
+  against a real device with existing app data. The riding-style
+  classifier's thresholds (0.12/0.05 g avg jerk) are an uncalibrated
+  first guess - tune against real recorded rides once available.
+3. **Keyless starter concept - NOT started, still no spec.** Ask the
+   builder what hardware they have in mind (relay wired into the
+   existing button/BLE stack? NFC/BLE-proximity unlock? something else?)
+   before writing any code for this.
 
 ### Phase I (reserved for last)
 Final UI polish pass - specific items not yet defined, the builder wants

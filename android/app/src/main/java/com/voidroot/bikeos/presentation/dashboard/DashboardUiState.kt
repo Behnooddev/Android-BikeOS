@@ -23,5 +23,7 @@ data class DashboardUiState(
     val rideMode: RideMode = RideMode.CRUISE,
     val currentTime: String = "--:--",
     val enabledWidgetKeys: Set<String> = emptySet(),
-    val isRideActive: Boolean = false
+    val isRideActive: Boolean = false,
+    /** Empty when gear suggestions are off, not moving/pedaling, or on-target with nothing to say - see GearSuggestionEngine. */
+    val gearSuggestionLabel: String = ""
 )

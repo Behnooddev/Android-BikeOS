@@ -87,6 +87,21 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/**
+ * Schema version 3: Phase H added `avgAccelJerkG` to `ride_session` -
+ * real MPU-based riding-style analysis (see RideSessionEntity kdoc).
+ * Existing rows backfill to 0f (Room's ALTER TABLE default), which
+ * HomeViewModel's ridingStyleFrom() already treats as "no real accel data
+ * for this ride, fall back to the old speed-burstiness heuristic" - so
+ * old rides keep working, they just don't get the new classifier
+ * retroactively (impossible - the raw accel samples were never stored).
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE ride_session ADD COLUMN avgAccelJerkG REAL NOT NULL DEFAULT 0.0")
+    }
+}
+
 @Database(
     entities = [
         UserProfileEntity::class,
@@ -97,7 +112,7 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         AppStateEntity::class,
         ThemeColorsEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class BikeOSDatabase : RoomDatabase() {

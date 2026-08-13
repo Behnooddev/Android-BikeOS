@@ -31,11 +31,17 @@
 #define BIKEOS_MSG_TYPE_CONTROL_COMMAND  0x10
 #define BIKEOS_MSG_TYPE_ERROR            0xFF
 
-// ---- Sensor Data payload (5 bytes) ----
-// wheelRpm(u16 LE) + cadenceRpm(u16 LE) + batteryPercent(u8)
+// ---- Sensor Data payload (7 bytes) ----
+// wheelRpm(u16 LE) + cadenceRpm(u16 LE) + batteryPercent(u8) + accelMilliG(u16 LE)
 // Speed/distance are NOT sent - see sensors.h kdoc (wheel circumference is
 // bike-profile data Android owns, firmware only reports raw RPM).
-#define BIKEOS_SENSOR_PAYLOAD_SIZE 5
+// accelMilliG: Phase H addition (protocol 1.1 -> 1.2) - magnitude of the
+// MPU6050 acceleration vector in milli-g (1000 = 1.0g, i.e. at rest under
+// gravity), from motion::getAccelMagnitude() * 1000, clamped to fit u16.
+// Feeds Android's real riding-style analysis (see HomeViewModel's
+// ridingStyleFrom) - previously only used internally for the anti-theft
+// alarm and never left the firmware at all.
+#define BIKEOS_SENSOR_PAYLOAD_SIZE 7
 
 // ---- Button Event payload (1 byte: which button) ----
 // IDs must match BlePacket.kt's DeviceButtonEvent enum exactly.

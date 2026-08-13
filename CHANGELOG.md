@@ -4,6 +4,65 @@ All notable changes to BikeOS, in order. Versions correspond to
 `android/app/build.gradle.kts`'s `versionName`. See `docs/` for the full
 detailed write-up behind any entry below.
 
+## [0.14.1] - Visual overhaul: Home + Dashboard restyled to match new cockpit design references
+### Changed
+- No new features, no logic changes - a pure visual pass matching two
+  design references the builder supplied (a landscape cockpit layout and
+  a portrait home-screen layout), reskinning existing screens rather than
+  touching any ViewModel/state/BLE code.
+- **Dashboard**: rebuilt as a real 3-column cockpit layout - stat cards
+  (Distance/Calories/Cadence/Gear) now stack vertically on the left
+  instead of a bottom row; the speed gauge got a thinner "precision arc"
+  look; ride-mode chips gained real icons (Cloud/RadioButtonChecked/Bolt/
+  Terrain/ArrowDownward) instead of Unicode glyphs; light controls moved
+  from a horizontal pill row into a vertical column of icon cards
+  (Front/Rear/Body) on the right, matching the reference's circular
+  icon-button style; the top status row (Connected/Battery/Exit) gained
+  matching icons; the music widget's transport controls became real
+  Material icons instead of emoji.
+- **Home**: added a decorative distance ring (aviation-instrument style)
+  above the greeting text, restyled the Start button to "START RIDE"
+  with a play icon, and added small icons to the Total Distance/Riding
+  Style cards.
+- `presentation/common/BikeOSMenuScaffold.kt` - top bar gained an
+  optional trailing-icon slot (`actions` param, unused by any screen yet)
+  and a gradient-tinted bold title, for visual consistency with the new
+  reference designs' branded top bars.
+### Note
+- Not build-verified (same sandbox limitation as always - see
+  `docs/20_MASTER_HANDOFF.md`). Static brace/paren-balance checked per
+  edited file. `Icons.Filled.Route`/`WbIncandescent`/`Terrain`/
+  `RadioButtonChecked` are standard `material-icons-extended` glyphs but
+  haven't been confirmed against this exact BOM version by a real build -
+  flag it if any fails to resolve and it'll get swapped immediately.
+
+## [0.14.0] - Phase H (part 1+2): gear suggestions + real riding-style analytics
+### Added
+- `core/health/GearSuggestionEngine.kt` - cadence-band-based gear shift
+  direction suggestions (easier/harder), gear-index-aware using the
+  synced bike profile. Wired into `DashboardViewModel`/`DashboardScreen`,
+  respects the (previously unused) `gearSuggestionsEnabled` Settings
+  toggle.
+- **BLE protocol 1.1 -> 1.2**: Sensor Data payload gained `accelMilliG`
+  (5 -> 7 bytes) - the MPU6050's accel magnitude, previously
+  firmware-internal only (anti-theft alarm), now reaches Android.
+  `firmware/src/bluetooth/ble_service.cpp`, `bikeos_protocol.h`,
+  `BlePacket.kt` updated together per CONTRIBUTING.md. Firmware version
+  0.5.0 -> 0.6.0.
+- Real MPU-based riding-style classifier in `HomeViewModel` - replaces
+  the old speed-burstiness heuristic when enough real accel data exists
+  (falls back to the old heuristic for older rides). New
+  `avgAccelJerkG` aggregate computed live during a ride
+  (`DashboardViewModel`), stored via Room schema v2 -> v3
+  (`MIGRATION_2_3`), included in `BackupManager`'s ride export.
+- `docs/22_PHASE_H_SUMMARY.md`.
+### Note
+- Not build/runtime-verified (no PlatformIO/Gradle/Android runtime in
+  this sandbox) - classifier thresholds and the Room migration in
+  particular need real-world sanity-checking. See
+  `docs/22_PHASE_H_SUMMARY.md`.
+- Keyless starter (3rd Phase H item) not started - no hardware spec yet.
+
 ## [0.13.0] - Phase J: alternate sensor backends
 ### Added
 - `firmware/src/config/sensor_backend_config.h` - compile-time `#define`

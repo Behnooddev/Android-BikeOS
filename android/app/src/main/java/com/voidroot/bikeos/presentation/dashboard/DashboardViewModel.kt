@@ -3,6 +3,8 @@ package com.voidroot.bikeos.presentation.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.voidroot.bikeos.core.health.CalorieCalculator
+import com.voidroot.bikeos.core.health.GearSuggestion
+import com.voidroot.bikeos.core.health.GearSuggestionEngine
 import com.voidroot.bikeos.core.theme.ClusterPalette
 import com.voidroot.bikeos.core.theme.DefaultClusterPalette
 import com.voidroot.bikeos.core.theme.resolveClusterPalette
@@ -19,6 +21,7 @@ import com.voidroot.bikeos.data.repository.DashboardConfigRepository
 import com.voidroot.bikeos.data.repository.RideRepository
 import com.voidroot.bikeos.data.repository.RideSession
 import com.voidroot.bikeos.data.repository.SensorRepository
+import com.voidroot.bikeos.data.repository.SettingsRepository
 import com.voidroot.bikeos.data.repository.ThemeColorsRepository
 import com.voidroot.bikeos.data.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -63,7 +66,19 @@ private data class RideAccumulator(
     val maxSpeedKmh: Float = 0f,
     val cadenceSum: Int = 0,
     val cadenceSamples: Int = 0,
-    val maxCadenceRpm: Int = 0
+    val maxCadenceRpm: Int = 0,
+    // Riding-style analytics (Phase H, protocol 1.2) - "jerk" here means
+    // frame-to-frame change in accel magnitude (|accel[t] - accel[t-1]|),
+    // NOT the physics term's rate-per-second - a rough smoothness signal
+    // sampled at whatever rate BLE notifications actually arrive (~2Hz,
+    // NOTIFY_INTERVAL_MS in ble_service.cpp), not a fixed-timestep
+    // derivative. Good enough to distinguish "smooth, steady pedaling"
+    // from "constant sharp accel/brake bursts" without overclaiming lab-
+    // grade jerk measurement. lastAccelG is null until the first real
+    // sample arrives (can't compute a delta from nothing).
+    val accelJerkSum: Float = 0f,
+    val accelJerkSamples: Int = 0,
+    val lastAccelG: Float? = null
 )
 
 /**
@@ -87,6 +102,7 @@ class DashboardViewModel @Inject constructor(
     private val callRepository: CallRepository,
     private val musicRepository: MusicRepository,
     private val appStateRepository: AppStateRepository,
+    private val settingsRepository: SettingsRepository,
     themeColorsRepository: ThemeColorsRepository
 ) : ViewModel() {
 
@@ -162,16 +178,20 @@ class DashboardViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            val bikeAndUser = combine(bikeRepository.observe(), userRepository.observe()) { bike, user -> bike to user }
+            val bikeUserSettings = combine(
+                bikeRepository.observe(),
+                userRepository.observe(),
+                settingsRepository.observe()
+            ) { bike, user, settings -> Triple(bike, user, settings) }
 
             combine(
                 sensorRepository.stream(),
                 _rideMode,
-                bikeAndUser,
+                bikeUserSettings,
                 dashboardConfigRepository.observeWidgets(),
                 _isRideActive
-            ) { snapshot, mode, bikeUser, widgets, active ->
-                val (bike, user) = bikeUser
+            ) { snapshot, mode, bikeUserSettings, widgets, active ->
+                val (bike, user, settings) = bikeUserSettings
 
                 val now = System.currentTimeMillis()
                 if (lastCalorieTickEpochMs != 0L) {
@@ -189,14 +209,40 @@ class DashboardViewModel @Inject constructor(
                 lastCalorieTickEpochMs = now
 
                 if (active) {
+                    // Only accumulate jerk from real, connected samples -
+                    // accelG is the honest 0f sentinel while disconnected
+                    // (see SensorSnapshot kdoc), which would otherwise
+                    // register as a huge fake "jerk" the moment BLE drops.
+                    val jerk = if (snapshot.isConnected && accumulator.lastAccelG != null) {
+                        kotlin.math.abs(snapshot.accelG - accumulator.lastAccelG)
+                    } else {
+                        null
+                    }
+
                     accumulator = accumulator.copy(
                         speedSum = accumulator.speedSum + snapshot.speedKmh,
                         speedSamples = accumulator.speedSamples + 1,
                         maxSpeedKmh = maxOf(accumulator.maxSpeedKmh, snapshot.speedKmh),
                         cadenceSum = accumulator.cadenceSum + snapshot.cadenceRpm,
                         cadenceSamples = accumulator.cadenceSamples + 1,
-                        maxCadenceRpm = maxOf(accumulator.maxCadenceRpm, snapshot.cadenceRpm)
+                        maxCadenceRpm = maxOf(accumulator.maxCadenceRpm, snapshot.cadenceRpm),
+                        accelJerkSum = accumulator.accelJerkSum + (jerk ?: 0f),
+                        accelJerkSamples = accumulator.accelJerkSamples + if (jerk != null) 1 else 0,
+                        lastAccelG = if (snapshot.isConnected) snapshot.accelG else accumulator.lastAccelG
                     )
+                }
+
+                val gearSuggestion = if (settings.gearSuggestionsEnabled) {
+                    GearSuggestionEngine.suggest(
+                        cadenceRpm = snapshot.cadenceRpm,
+                        speedKmh = snapshot.speedKmh,
+                        frontGear = bike.currentFrontGear,
+                        rearGear = bike.currentRearGear,
+                        frontGearCount = bike.frontGearCount,
+                        rearGearCount = bike.rearGearCount
+                    )
+                } else {
+                    GearSuggestion.None
                 }
 
                 DashboardUiState(
@@ -211,7 +257,8 @@ class DashboardViewModel @Inject constructor(
                     rideMode = mode,
                     currentTime = snapshot.currentTime,
                     enabledWidgetKeys = widgets.filter { it.enabled }.map { it.key }.toSet(),
-                    isRideActive = active
+                    isRideActive = active,
+                    gearSuggestionLabel = gearSuggestion.label
                 )
             }.collect { _uiState.value = it }
         }
@@ -315,7 +362,8 @@ class DashboardViewModel @Inject constructor(
                     maxSpeedKmh = acc.maxSpeedKmh,
                     avgCadenceRpm = if (acc.cadenceSamples > 0) acc.cadenceSum / acc.cadenceSamples else 0,
                     maxCadenceRpm = acc.maxCadenceRpm,
-                    rideMode = state.rideMode.name
+                    rideMode = state.rideMode.name,
+                    avgAccelJerkG = if (acc.accelJerkSamples > 0) acc.accelJerkSum / acc.accelJerkSamples else 0f
                 )
             )
         }

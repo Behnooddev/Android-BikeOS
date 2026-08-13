@@ -236,6 +236,7 @@ class BackupManager @Inject constructor(
                 put("avgCadenceRpm", r.avgCadenceRpm)
                 put("maxCadenceRpm", r.maxCadenceRpm)
                 put("rideMode", r.rideMode)
+                put("avgAccelJerkG", r.avgAccelJerkG)
             })
         }
     }.toString()

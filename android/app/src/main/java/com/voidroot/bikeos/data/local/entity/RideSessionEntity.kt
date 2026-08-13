@@ -21,5 +21,7 @@ data class RideSessionEntity(
     val maxSpeedKmh: Float,
     val avgCadenceRpm: Int,
     val maxCadenceRpm: Int,
-    val rideMode: String
+    val rideMode: String,
+    /** Avg frame-to-frame accel-magnitude jerk in g, real MPU data (protocol 1.2, Phase H) - see RideSession's kdoc. Defaults to 0f (Room migration backfills existing rows this way) so pre-Phase-H rides are honestly distinguishable from "rode smoothly". */
+    val avgAccelJerkG: Float = 0f
 )

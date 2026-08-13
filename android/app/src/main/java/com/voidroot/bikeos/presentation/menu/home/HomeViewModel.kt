@@ -58,15 +58,55 @@ class HomeViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeUiState())
 
     /**
-     * v1 heuristic only: ratio of max-to-average speed across recent rides
-     * as a rough "burstiness" signal. A real riding-style classifier using
-     * raw IMU data (now that the MPU is wired - see Phase 4) is Phase 5
-     * territory (Smart Features / advanced analytics) - this is
-     * deliberately simple and derived from real stored ride data, not a
-     * placeholder number.
+     * Prefers the real MPU-based classifier (protocol 1.2 / Phase H) -
+     * only rides recorded with a real, connected accel stream have a
+     * nonzero avgAccelJerkG (see RideSessionEntity's kdoc: 0f means "no
+     * real accel data for this ride", not "rode perfectly smoothly", so
+     * it's a safe filter condition). Falls back to the older max/avg-
+     * speed-ratio heuristic for rides recorded before this existed, or
+     * when there simply isn't yet enough real accel data.
      */
     private fun ridingStyleFrom(rides: List<RideSession>): String {
-        if (rides.size < 3) return "Not enough data yet - go for a ride!"
+        val ridesWithAccelData = rides.filter { it.avgAccelJerkG > 0f }
+
+        return when {
+            ridesWithAccelData.size >= 3 -> ridingStyleFromAccel(ridesWithAccelData)
+            rides.size >= 3 -> ridingStyleFromSpeedBurstiness(rides)
+            else -> "Not enough data yet - go for a ride!"
+        }
+    }
+
+    /**
+     * Real classifier: average "jerk" (frame-to-frame accel-magnitude
+     * change - see [com.voidroot.bikeos.presentation.dashboard.DashboardViewModel]'s
+     * RideAccumulator kdoc for the exact definition) across recent rides
+     * with real MPU data.
+     *
+     * Thresholds below are a first-pass estimate, NOT calibrated against
+     * a real ride - no physical device has run this firmware/app pairing
+     * in this sandbox. Typical road vibration is roughly a few
+     * hundredths of a g between the ~2Hz BLE samples; sharp
+     * accel/brake/pothole events push noticeably past that - but the
+     * exact cutoffs should be tuned against real recorded rides once
+     * available (e.g. look at avgAccelJerkG across a deliberately smooth
+     * ride vs a deliberately aggressive one and set the boundaries
+     * in between).
+     */
+    private fun ridingStyleFromAccel(rides: List<RideSession>): String {
+        val avgJerk = rides.map { it.avgAccelJerkG }.average()
+        return when {
+            avgJerk > 0.12 -> "Aggressive - frequent sharp accelerations and braking"
+            avgJerk > 0.05 -> "Balanced - mixed pace riding"
+            else -> "Smooth - steady, consistent pace"
+        }
+    }
+
+    /**
+     * v1 fallback heuristic (pre-Phase-H): ratio of max-to-average speed
+     * across recent rides as a rough "burstiness" signal - kept only for
+     * rides that predate real accel data, see [ridingStyleFrom] above.
+     */
+    private fun ridingStyleFromSpeedBurstiness(rides: List<RideSession>): String {
         val burstRatio = rides
             .filter { it.avgSpeedKmh > 0 }
             .map { it.maxSpeedKmh / it.avgSpeedKmh }

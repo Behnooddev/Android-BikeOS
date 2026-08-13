@@ -15,12 +15,14 @@ data class RideSession(
     val maxSpeedKmh: Float,
     val avgCadenceRpm: Int,
     val maxCadenceRpm: Int,
-    val rideMode: String
+    val rideMode: String,
+    /** Avg frame-to-frame accel-magnitude change over the ride, in g - real MPU data (protocol 1.2, Phase H). 0f for rides saved before this existed, or a ride with zero real accel samples (e.g. never actually connected) - HomeViewModel falls back to the old speed-burstiness heuristic when this is 0. */
+    val avgAccelJerkG: Float = 0f
 )
 
 private fun RideSessionEntity.toDomain() = RideSession(
     startTimeEpochMs, endTimeEpochMs, durationSeconds, distanceKm, calories,
-    avgSpeedKmh, maxSpeedKmh, avgCadenceRpm, maxCadenceRpm, rideMode
+    avgSpeedKmh, maxSpeedKmh, avgCadenceRpm, maxCadenceRpm, rideMode, avgAccelJerkG
 )
 
 private fun RideSession.toEntity() = RideSessionEntity(
@@ -33,7 +35,8 @@ private fun RideSession.toEntity() = RideSessionEntity(
     maxSpeedKmh = maxSpeedKmh,
     avgCadenceRpm = avgCadenceRpm,
     maxCadenceRpm = maxCadenceRpm,
-    rideMode = rideMode
+    rideMode = rideMode,
+    avgAccelJerkG = avgAccelJerkG
 )
 
 /**
