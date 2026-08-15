@@ -24,6 +24,13 @@ android {
         kotlinCompilerExtensionVersion = "1.5.14"
     }
 
+    sourceSets {
+        getByName("main") {
+            // Room schema history for migration testing (see ksp room.schemaLocation below)
+            assets.srcDirs("$projectDir/schemas")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -77,4 +84,10 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("androidx.hilt:hilt-work:1.2.0")
     ksp("androidx.hilt:hilt-compiler:1.2.0")
+}
+
+ksp {
+    // Room reads/writes migration schema history here (kept in git, see
+    // sourceSets.main.assets above so tests can load prior schema versions)
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
