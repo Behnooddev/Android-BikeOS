@@ -11,7 +11,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,13 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBike
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Route
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,10 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -108,78 +98,36 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = hilt
             modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = uiState.greetingMessage,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
+                color = BikeTextPrimary,
+                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth().padding(top = 36.dp)
+            )
+
             Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // Decorative readiness ring - echoes the total-distance card below
-                    // in a single glanceable number, aviation-instrument style.
-                    Box(modifier = Modifier.size(220.dp), contentAlignment = Alignment.Center) {
-                        Canvas(modifier = Modifier.size(220.dp)) {
-                            val strokeWidth = 5.dp.toPx()
-                            val arcSize = Size(size.width - strokeWidth, size.height - strokeWidth)
-                            val topLeft = androidx.compose.ui.geometry.Offset(strokeWidth / 2f, strokeWidth / 2f)
-                            drawArc(
-                                color = BikeTextPrimary.copy(alpha = 0.06f),
-                                startAngle = -90f,
-                                sweepAngle = 360f,
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                                topLeft = topLeft,
-                                size = arcSize
-                            )
-                            val progressSweep = (uiState.totalDistanceKm.coerceIn(0f, 100f) / 100f) * 360f
-                            drawArc(
-                                color = BikePrimary,
-                                startAngle = -90f,
-                                sweepAngle = progressSweep.coerceAtLeast(6f),
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
-                                topLeft = topLeft,
-                                size = arcSize
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                String.format("%.1f", uiState.totalDistanceKm),
-                                style = MaterialTheme.typography.displayLarge.copy(fontSize = 48.sp),
-                                color = BikeTextPrimary
-                            )
-                            Text("km", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
-                        }
-                    }
-
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(0.62f)
+                        .height(64.dp)
+                        .shadow(
+                            elevation = 24.dp,
+                            shape = RoundedCornerShape(32.dp),
+                            ambientColor = BikePrimary.copy(alpha = glowAlpha),
+                            spotColor = BikeAccent.copy(alpha = glowAlpha)
+                        )
+                        .background(Brush.horizontalGradient(listOf(BikePrimary, BikeAccent)), RoundedCornerShape(32.dp))
+                        .clickable { navController.navigate(BikeOSDestinations.CLUSTER_BOOT) },
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = uiState.greetingMessage,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
-                        color = BikeTextSecondary,
-                        textAlign = TextAlign.Center,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 32.dp)
+                        "START",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = BikeBackground
                     )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.72f)
-                            .height(56.dp)
-                            .shadow(
-                                elevation = 24.dp,
-                                shape = RoundedCornerShape(28.dp),
-                                ambientColor = BikePrimary.copy(alpha = glowAlpha),
-                                spotColor = BikeAccent.copy(alpha = glowAlpha)
-                            )
-                            .background(Brush.horizontalGradient(listOf(BikePrimary, BikeAccent)), RoundedCornerShape(28.dp))
-                            .clickable { navController.navigate(BikeOSDestinations.CLUSTER_BOOT) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = BikeBackground)
-                            Text(
-                                "START RIDE",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = BikeBackground
-                            )
-                        }
-                    }
                 }
             }
 
@@ -189,29 +137,21 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeViewModel = hilt
             ) {
                 GlassCard(modifier = Modifier.weight(1f)) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Filled.Route, contentDescription = null, tint = BikeTextSecondary, modifier = Modifier.size(14.dp))
-                            Text("Total Distance", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
-                        }
+                        Text("Total Distance", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
                         Text(
                             String.format("%.1f km", uiState.totalDistanceKm),
                             style = MaterialTheme.typography.titleMedium,
-                            color = BikeTextPrimary,
-                            modifier = Modifier.padding(top = 4.dp)
+                            color = BikeTextPrimary
                         )
                     }
                 }
                 GlassCard(modifier = Modifier.weight(1f)) {
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Icon(Icons.Filled.DirectionsBike, contentDescription = null, tint = BikeTextSecondary, modifier = Modifier.size(14.dp))
-                            Text("Riding Style", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
-                        }
+                        Text("Riding Style", style = MaterialTheme.typography.labelSmall, color = BikeTextSecondary)
                         Text(
                             uiState.ridingStyleSummary,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = BikeTextPrimary,
-                            modifier = Modifier.padding(top = 4.dp)
+                            color = BikeTextPrimary
                         )
                     }
                 }

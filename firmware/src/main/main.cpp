@@ -6,6 +6,7 @@
 #include "../power/power.h"
 #include "../motion/motion.h"
 #include "../alarm/alarm.h"
+#include "../buzzer/buzzer.h"
 
 // BikeOS Firmware entry point.
 // Current state: every hardware module the builder has confirmed
@@ -18,11 +19,16 @@
 //   motion     - MPU6050 accel magnitude (feeds the alarm system)
 //   alarm      - anti-theft: wheel-pulse-while-armed OR motion-delta
 //                trigger, buzzer + blinking lights, BLE alarm events
+//   buzzer     - shared piezo buzzer GPIO (Phase H) - alarm.cpp's
+//                triggered buzz AND the keyless "system on" ignition
+//                chime both go through this one module now
 //
 // init() order matters a little: sensors::init() calls Wire.begin()
 // first, and power::init()/motion::init() both rely on that same I2C bus
 // already being up (their own Wire.begin() calls are idempotent no-ops if
-// so, defensive if not).
+// so, defensive if not). buzzer::init() has no such dependency - anywhere
+// before alarm::init() is fine, since alarm.cpp no longer touches the pin
+// directly.
 
 void setup() {
     Serial.begin(115200);
@@ -33,6 +39,7 @@ void setup() {
     bikeos::power::init();
     bikeos::motion::init();
     bikeos::controls::init();
+    bikeos::buzzer::init();
     bikeos::alarm::init();
     bikeos::ble::init();
 }
@@ -42,6 +49,7 @@ void loop() {
     bikeos::power::poll();
     bikeos::motion::poll();
     bikeos::controls::poll();
+    bikeos::buzzer::poll();
     bikeos::alarm::poll();
     bikeos::ble::tick();
 }

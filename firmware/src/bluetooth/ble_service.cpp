@@ -13,6 +13,7 @@
 #include "../power/power.h"
 #include "../alarm/alarm.h"
 #include "../motion/motion.h"
+#include "../buzzer/buzzer.h"
 
 namespace bikeos::ble {
 namespace {
@@ -200,6 +201,16 @@ namespace {
                 case BIKEOS_CMD_BODY_LIGHT_OFF:  bikeos::controls::setBodyLight(false);  break;
                 case BIKEOS_CMD_ARM_ALARM:       bikeos::alarm::arm();    break;
                 case BIKEOS_CMD_DISARM_ALARM:    bikeos::alarm::disarm(); break;
+                case BIKEOS_CMD_SYSTEM_ON:
+                    // Keyless starter's "ignition on" - see bikeos_protocol.h's
+                    // kdoc on BIKEOS_CMD_SYSTEM_ON. Lights on + 3-beep chime;
+                    // beepPattern() itself no-ops harmlessly if the alarm
+                    // happens to be mid-trigger (locked) at the same moment.
+                    bikeos::controls::setFrontLight(true);
+                    bikeos::controls::setRearLight(true);
+                    bikeos::controls::setBodyLight(true);
+                    bikeos::buzzer::beepPattern(3);
+                    break;
                 // SET_MODE_*/UPDATE_*_GEAR/REQUEST_STATUS/RESET_DEVICE/SYNC_TIME:
                 // parsed+validated above, intentionally no physical effect yet
                 // (see class kdoc) - falls through to the log line below.

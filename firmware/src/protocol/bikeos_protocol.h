@@ -75,3 +75,10 @@
 #define BIKEOS_CMD_SYNC_TIME          0x32
 #define BIKEOS_CMD_ARM_ALARM          0x40
 #define BIKEOS_CMD_DISARM_ALARM       0x41
+// Phase H - keyless starter: the main button on the builder's BLE remote
+// (paired to the PHONE, not the ESP32 - see docs/23_PHASE_H_KEYLESS_STARTER.md
+// for why) triggers this. Turns on all lights + a 3-beep buzzer chime, the
+// closest BikeOS equivalent to a vehicle's "ignition on" since there's no
+// engine to actually start. Does NOT touch the alarm - the remote's other
+// two buttons reuse the existing ARM_ALARM/DISARM_ALARM commands above for that.
+#define BIKEOS_CMD_SYSTEM_ON          0x50

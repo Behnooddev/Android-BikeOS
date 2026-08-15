@@ -63,7 +63,9 @@ enum class ControlCommand(val id: Int) {
     SET_MODE_CLIMB(0x13), SET_MODE_DOWNHILL(0x14),
     UPDATE_FRONT_GEAR(0x20), UPDATE_REAR_GEAR(0x21),
     REQUEST_STATUS(0x30), RESET_DEVICE(0x31), SYNC_TIME(0x32),
-    ARM_ALARM(0x40), DISARM_ALARM(0x41)
+    ARM_ALARM(0x40), DISARM_ALARM(0x41),
+    /** Keyless starter (Phase H) - "ignition on": all lights + a 3-beep chime. See bikeos_protocol.h's BIKEOS_CMD_SYSTEM_ON kdoc. */
+    SYSTEM_ON(0x50)
 }
 
 /**

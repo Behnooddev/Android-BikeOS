@@ -4,22 +4,20 @@
 #include "../sensors/sensors.h"
 #include "../motion/motion.h"
 #include "../controls/controls.h"
+#include "../buzzer/buzzer.h"
 
 // ============================================================================
-// Wiring: buzzer OUT -> GPIO23 (through a transistor/MOSFET if it's not a
-// small active buzzer module that can be driven directly from a GPIO -
-// check your specific buzzer's current draw; passive piezo buzzers under
-// ~20mA are usually fine straight off a GPIO, anything louder needs a
-// switching transistor same as the lights).
+// Buzzer wiring/pin ownership moved to buzzer.h/buzzer.cpp (Phase H's
+// keyless-starter ignition chime needed the same GPIO for short one-shot
+// beep patterns, so it's now a shared module instead of alarm.cpp owning
+// the pin outright) - this module now goes through bikeos::buzzer::drive()
+// instead of digitalWrite() directly.
 // ============================================================================
-
-#define BUZZER_PIN 23
 
 #define ARM_GRACE_PERIOD_MS 3000UL   // ignore triggers right after arming - avoids false-triggering on the arming action itself
 #define MOTION_WINDOW_MS 7000UL      // per the spec: compare accel average across a ~7s window
 #define MOTION_DELTA_THRESHOLD_G 0.35f // tuned conservatively - revisit after real-world testing on the actual bike
 #define BLINK_INTERVAL_MS 300UL
-#define BUZZER_BEEP_MS 200UL
 
 namespace bikeos::alarm {
 namespace {
@@ -81,16 +79,12 @@ namespace {
 
         if (now - lastBuzzMs >= BLINK_INTERVAL_MS) {
             lastBuzzMs = now;
-            if (blinkOn) {
-                digitalWrite(BUZZER_PIN, HIGH);
-            } else {
-                digitalWrite(BUZZER_PIN, LOW);
-            }
+            bikeos::buzzer::drive(blinkOn);
         }
     }
 
     void silenceOutputs() {
-        digitalWrite(BUZZER_PIN, LOW);
+        bikeos::buzzer::drive(false);
         // Deliberately NOT forcing lights off here - if the rider had them
         // on manually before the alarm triggered, disarm() should restore
         // that state, not silently turn lights off. Simplest correct
@@ -100,8 +94,8 @@ namespace {
 }
 
 void init() {
-    pinMode(BUZZER_PIN, OUTPUT);
-    digitalWrite(BUZZER_PIN, LOW);
+    // Buzzer pin setup now lives in buzzer::init() (called from main.cpp) -
+    // this module no longer touches pinMode()/digitalWrite() directly.
 }
 
 void poll() {
@@ -116,12 +110,14 @@ void poll() {
 
     if (wheelMovedSinceArming()) {
         triggered = true;
+        bikeos::buzzer::lockForExternalControl(true);
         Serial.println("[Alarm] Triggered - wheel movement detected while armed");
         return;
     }
 
     checkMotionWindow();
     if (triggered) {
+        bikeos::buzzer::lockForExternalControl(true);
         Serial.println("[Alarm] Triggered - motion delta exceeded threshold");
     }
 }
@@ -139,6 +135,7 @@ void disarm() {
     armed = false;
     triggered = false;
     silenceOutputs();
+    bikeos::buzzer::lockForExternalControl(false);
     Serial.println("[Alarm] Disarmed");
 }
 

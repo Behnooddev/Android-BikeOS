@@ -13,8 +13,8 @@ android {
         applicationId = "com.voidroot.bikeos"
         minSdk = 29        // Android 10 - required for BLE feature set used by BikeOS
         targetSdk = 34
-        versionCode = 16
-        versionName = "0.14.1" // UI visual overhaul (Home + Dashboard) matching new VoidRoot cockpit design references
+        versionCode = 17
+        versionName = "0.16.0" // Phase I - UI overhaul (Apple x Tesla dark theme, app icon, splash screen) + keyboard/status-bar bug fixes
     }
 
     buildFeatures {
@@ -40,6 +40,14 @@ android {
 }
 
 dependencies {
+    // Splash Screen API (Phase I) - "million dollar product" first-impression
+    // fix per docs/24_PHASE_I_UI_OVERHAUL.md: a plain white/black system
+    // flash before the app UI painted was the previous default. Uses the
+    // real launcher icon (no custom animated icon override needed - it
+    // already looks premium) on a background matching the app's own dark
+    // theme, with a smooth cross-fade into the actual UI instead of a hard cut.
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     // Core / Compose
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")

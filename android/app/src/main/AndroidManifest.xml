@@ -42,12 +42,21 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.BikeOS"
-            android:screenOrientation="portrait">
+            android:theme="@style/Theme.BikeOS.Splash"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
             <!-- Portrait by default - only the Dashboard/cluster and its
                  boot sequence force landscape, programmatically, since
                  that's the only screen meant to be viewed handlebar-
-                 mounted sideways. See core/common/LandscapeOnly.kt. -->
+                 mounted sideways. See core/common/LandscapeOnly.kt.
+                 windowSoftInputMode="adjustResize": belt-and-suspenders
+                 for the keyboard-covers-fields bug fix (see
+                 docs/24_PHASE_I_UI_OVERHAUL.md) - the actual fix on
+                 edge-to-edge (enableEdgeToEdge() in this Activity) is
+                 each scrollable form's own .imePadding() modifier, since
+                 adjustResize/adjustPan are largely superseded once
+                 decorFitsSystemWindows is false, but this costs nothing
+                 and helps on older/OEM edge cases. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

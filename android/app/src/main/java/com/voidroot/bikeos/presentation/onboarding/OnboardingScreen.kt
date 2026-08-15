@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -84,7 +86,7 @@ fun OnboardingScreen(navController: NavHostController, viewModel: OnboardingView
         if (pagerState.currentPage < onboardingPages.lastIndex) {
             TextButton(
                 onClick = { finish() },
-                modifier = Modifier.align(Alignment.TopEnd).padding(20.dp)
+                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(20.dp)
             ) {
                 Text("Skip", color = Color.White.copy(alpha = 0.8f))
             }
@@ -92,7 +94,7 @@ fun OnboardingScreen(navController: NavHostController, viewModel: OnboardingView
 
         // Page indicator dots
         Row(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 110.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 110.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             onboardingPages.indices.forEach { index ->
@@ -121,6 +123,7 @@ fun OnboardingScreen(navController: NavHostController, viewModel: OnboardingView
             colors = ButtonDefaults.buttonColors(containerColor = BikePrimary),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
                 .padding(bottom = 40.dp)
                 .fillMaxWidth(0.7f)
         ) {

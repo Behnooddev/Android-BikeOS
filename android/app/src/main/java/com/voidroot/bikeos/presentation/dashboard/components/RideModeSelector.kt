@@ -9,16 +9,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.RadioButtonChecked
-import androidx.compose.material.icons.filled.Terrain
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,18 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.voidroot.bikeos.core.theme.LocalClusterPalette
 import com.voidroot.bikeos.presentation.dashboard.RideMode
-
-private fun modeIcon(mode: RideMode): ImageVector = when (mode) {
-    RideMode.ECO -> Icons.Filled.Cloud
-    RideMode.CRUISE -> Icons.Filled.RadioButtonChecked
-    RideMode.SPRINT -> Icons.Filled.Bolt
-    RideMode.CLIMB -> Icons.Filled.Terrain
-    RideMode.DOWNHILL -> Icons.Filled.ArrowDownward
-}
 
 /**
  * Ride-mode pill row - each chip carries the mode's glyph + label, with a
@@ -77,12 +60,7 @@ fun RideModeSelector(
                     .padding(horizontal = 16.dp, vertical = 9.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(
-                    modeIcon(mode),
-                    contentDescription = null,
-                    tint = if (isSelected) mode.color else palette.textSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
+                Text(mode.glyph, color = if (isSelected) mode.color else palette.textSecondary, style = MaterialTheme.typography.labelSmall)
                 Text(
                     text = mode.label,
                     style = MaterialTheme.typography.labelSmall,

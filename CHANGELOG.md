@@ -4,48 +4,61 @@ All notable changes to BikeOS, in order. Versions correspond to
 `android/app/build.gradle.kts`'s `versionName`. See `docs/` for the full
 detailed write-up behind any entry below.
 
-## [0.14.1] - Visual overhaul: Home + Dashboard restyled to match new cockpit design references
+## [0.16.0] - Phase I: UI overhaul + 2 bug fixes
+### Added
+- Real app icon (builder-provided artwork) - full mipmap set (legacy +
+  round + adaptive icon foreground/background at all densities), old
+  placeholder vectors removed.
+- Splash screen (`androidx.core:core-splashscreen`) - real launcher icon
+  on the app's own background instead of a blank system flash, custom
+  fade+scale exit animation.
+- Design refresh ("Apple x Tesla" premium direction): deeper near-black
+  background (`#06070A`), signal-blue primary accent replacing neon
+  cyan (`#3E8EFF`), refined indigo secondary accent (`#8B5CF6`),
+  tightened display typography, `GlassCard` top-edge light gradient,
+  instrument-cluster tick marks + monospace readout on `SpeedGauge`.
 ### Fixed
-- `DashboardViewModel.kt` - real compiler error from the first Actions
-  build after this pass (`Smart cast to 'Float' is impossible, because
-  'accumulator.lastAccelG' is a complex expression`, line 217): reading a
-  `var` property (`accumulator`) twice in one expression (null-check then
-  use) isn't smart-castable since the compiler can't prove `accumulator`
-  didn't change in between. Captured `accumulator.lastAccelG` into a
-  local `val` once, then null-checked/used that instead - pre-existing
-  Phase H code, unrelated to this pass's UI changes, but this was the
-  first real build attempt since Phase H landed so it's the first time
-  it surfaced.
-### Changed
-- No new features, no logic changes - a pure visual pass matching two
-  design references the builder supplied (a landscape cockpit layout and
-  a portrait home-screen layout), reskinning existing screens rather than
-  touching any ViewModel/state/BLE code.
-- **Dashboard**: rebuilt as a real 3-column cockpit layout - stat cards
-  (Distance/Calories/Cadence/Gear) now stack vertically on the left
-  instead of a bottom row; the speed gauge got a thinner "precision arc"
-  look; ride-mode chips gained real icons (Cloud/RadioButtonChecked/Bolt/
-  Terrain/ArrowDownward) instead of Unicode glyphs; light controls moved
-  from a horizontal pill row into a vertical column of icon cards
-  (Front/Rear/Body) on the right, matching the reference's circular
-  icon-button style; the top status row (Connected/Battery/Exit) gained
-  matching icons; the music widget's transport controls became real
-  Material icons instead of emoji.
-- **Home**: added a decorative distance ring (aviation-instrument style)
-  above the greeting text, restyled the Start button to "START RIDE"
-  with a play icon, and added small icons to the Total Distance/Riding
-  Style cards.
-- `presentation/common/BikeOSMenuScaffold.kt` - top bar gained an
-  optional trailing-icon slot (`actions` param, unused by any screen yet)
-  and a gradient-tinted bold title, for visual consistency with the new
-  reference designs' branded top bars.
+- Keyboard covering the lower Signup form fields - `.imePadding()` added
+  to every text-field screen (Signup/Account/Settings/Calculator) +
+  `windowSoftInputMode="adjustResize"` as a belt-and-suspenders.
+- Menu button drifting under the status bar on some screen sizes -
+  `BikeOSMenuScaffold` (and Onboarding's Skip button/bottom controls)
+  now use real `statusBarsPadding()`/`navigationBarsPadding()` insets
+  instead of having no inset handling at all.
 ### Note
-- Not build-verified (same sandbox limitation as always - see
-  `docs/20_MASTER_HANDOFF.md`). Static brace/paren-balance checked per
-  edited file. `Icons.Filled.Route`/`WbIncandescent`/`Terrain`/
-  `RadioButtonChecked` are standard `material-icons-extended` glyphs but
-  haven't been confirmed against this exact BOM version by a real build -
-  flag it if any fails to resolve and it'll get swapped immediately.
+- Design-system-level pass (palette/typography/shared components/splash)
+  + the 2 bugs, not a full screen-by-screen rebuild - see
+  `docs/24_PHASE_I_UI_OVERHAUL.md` for exactly what was and wasn't
+  touched, and why this pass especially needs real-device verification
+  before considering it "done" (visual/subjective changes, unverifiable
+  from static checks alone).
+
+## [0.15.0] - Phase H (part 3): keyless starter
+### Added
+- New shared `firmware/src/buzzer/` module - buzzer GPIO ownership moved
+  out of `alarm.cpp` so both the existing triggered-alarm buzz AND a new
+  non-blocking `beepPattern()` (ignition chime) can share it safely via
+  `lockForExternalControl()`. `alarm.cpp`'s own behavior is unchanged,
+  just refactored to go through `buzzer::drive()`.
+- New BLE command `BIKEOS_CMD_SYSTEM_ON` (0x50, additive - no protocol
+  version bump) - "ignition on": all 3 lights + a 3-beep chime.
+  `ControlCommand.SYSTEM_ON` added to `BlePacket.kt` to match.
+- New `RemoteKeyHandler` (Android) - bridges hardware KeyEvents from a
+  Bluetooth HID remote (the builder's camera-shutter remote, paired to
+  the PHONE not the ESP32 - see `docs/23_PHASE_H_KEYLESS_STARTER.md` for
+  why) to BLE control commands over the app's existing ESP32 connection.
+  Wired into `MainActivity.onKeyDown()`.
+- `docs/23_PHASE_H_KEYLESS_STARTER.md`.
+### Note
+- **The remote button -> keyCode mapping is UNVERIFIED** - written
+  without the physical remote available to test. Unmapped keyCodes are
+  logged (`Log.d("RemoteKeyHandler", ...)`) so the builder can press each
+  button once, check Logcat, and correct `RemoteKeyHandler.kt`'s
+  `keyCodeMap` - see the doc above for the exact steps.
+- Not build/runtime-verified (no PlatformIO/Gradle/Android runtime in
+  this sandbox).
+- **Phase H is now fully done** (all 3 parts: gear suggestions, real
+  riding-style analytics, keyless starter).
 
 ## [0.14.0] - Phase H (part 1+2): gear suggestions + real riding-style analytics
 ### Added

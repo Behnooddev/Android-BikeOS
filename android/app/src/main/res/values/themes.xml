@@ -1,3 +1,17 @@
 <resources>
     <style name="Theme.BikeOS" parent="android:Theme.Material.NoActionBar" />
+
+    <!-- Splash Screen API theme (Phase I) - shown instantly at cold-start
+         before any Activity/Compose code runs, using the real launcher
+         icon (androidx.core.splashscreen defaults to it - no separate
+         asset needed) on the app's own background color, then hands off
+         to Theme.BikeOS automatically via postSplashScreenTheme. See
+         MainActivity's installSplashScreen() call and
+         docs/24_PHASE_I_UI_OVERHAUL.md. -->
+    <style name="Theme.BikeOS.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/bike_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/bike_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.BikeOS</item>
+    </style>
 </resources>

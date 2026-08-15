@@ -1,8 +1,10 @@
 # BikeOS - Master Handoff Prompt
 
 Paste this whole document as the first message in a new chat, along with
-the attached `BikeOS_Handoff.zip` (upload it so Claude can read the real
-current code before doing anything).
+the attached zip (upload it so Claude can read the real current code
+before doing anything) - the builder names each session's output zip
+`BikeOS_Phase_<X>` rather than `BikeOS_Handoff`, so the exact filename
+will vary; any BikeOS zip attached alongside this doc is the one to read.
 
 ---
 
@@ -16,7 +18,7 @@ lights, anti-theft alarm, calls/music widgets, and more.
 
 - License: Proprietary (see `LICENSE`)
 - Full history of every phase and every bug found+fixed:
-  `docs/` folder, numbered files `00_...` through `19_...`, read in order
+  `docs/` folder, numbered files `00_...` through `24_...`, read in order
   for the complete "why" behind any decision.
 - `README.md`, `CONTRIBUTING.md`, `HOW_TO_USE.md`, `CHANGELOG.md`,
   `SECURITY.md` already exist at repo root - read `CONTRIBUTING.md`
@@ -152,8 +154,8 @@ our previous app 'Lumen', not a small dropdown."*
 | G (wiring guide + GitHub files) | ✅ Done |
 | **UI bug-fix pass (mode selector, greeting, menu drawer)** | ✅ Done - not yet visually verified on a device |
 | **J (alternate sensor backends)** | ✅ Done - not build-verified, see below |
-| **H (gear suggestions + riding analytics)** | 🔶 2/3 done - not build-verified, see below |
-| I (final UI polish, reserved for last) | ⏳ Not started |
+| **H (gear suggestions + riding analytics + keyless starter)** | ✅ Done (3/3) - not build-verified, see below |
+| **I (final UI polish - Apple x Tesla redesign + 2 bug fixes)** | ✅ Done - not build/runtime-verified, HIGH PRIORITY to check on a real device (visual/subjective), see below |
 
 ### Phase J - alternative sensor code (DONE)
 
@@ -198,7 +200,7 @@ added or changed).
   real AO module during bring-up.
 - No runtime auto-detection was built (wasn't requested).
 
-### Phase H (2/3 done)
+### Phase H (3/3 done - full write-up in docs/22 and docs/23)
 
 Builder said "continue" (delegated exact scope to the assistant's
 judgment) when asked which pieces to tackle. Full write-up:
@@ -230,14 +232,88 @@ judgment) when asked which pieces to tackle. Full write-up:
   against a real device with existing app data. The riding-style
   classifier's thresholds (0.12/0.05 g avg jerk) are an uncalibrated
   first guess - tune against real recorded rides once available.
-3. **Keyless starter concept - NOT started, still no spec.** Ask the
-   builder what hardware they have in mind (relay wired into the
-   existing button/BLE stack? NFC/BLE-proximity unlock? something else?)
-   before writing any code for this.
 
-### Phase I (reserved for last)
-Final UI polish pass - specific items not yet defined, the builder wants
-this explicitly last, after H and J.
+3. **Keyless starter - DONE.** Builder clarified: a generic Bluetooth
+   camera-shutter remote (3 buttons - shutter + zoom in/out), repurposed
+   as shutter=ignition-on, zoom buttons=arm/disarm. Since this is a
+   Bluetooth HID accessory (not a custom BLE peripheral), it pairs to the
+   **phone**, not the ESP32 - the phone intercepts its key events
+   (`RemoteKeyHandler.kt`, wired into `MainActivity.onKeyDown()`) and
+   forwards BLE Control Commands over the app's existing ESP32
+   connection. New firmware command `BIKEOS_CMD_SYSTEM_ON` (0x50,
+   additive, no protocol version bump) turns on all lights + fires a new
+   non-blocking buzzer chime (`beepPattern()`) - required extracting the
+   buzzer GPIO out of `alarm.cpp` into its own shared `buzzer/` module so
+   the alarm's existing buzz and the new chime can't fight over the pin.
+   Arm/disarm reuse the pre-existing `ARM_ALARM`/`DISARM_ALARM` commands
+   unchanged. Full reasoning (esp. why the ESP32 doesn't talk to the
+   remote directly - BLE HID host would've been unsafe to write untested
+   here): `docs/23_PHASE_H_KEYLESS_STARTER.md`.
+
+   **UNVERIFIED - top priority for the builder's next real-hardware
+   session**: the exact `keyCode` each of the remote's 3 buttons sends
+   was never confirmed (no physical remote in this sandbox).
+   `RemoteKeyHandler.kt`'s `keyCodeMap` is a first guess - the doc above
+   has step-by-step instructions (pair remote -> `adb logcat -s
+   RemoteKeyHandler` -> press each button -> note the keyCode -> edit the
+   map) to get the real mapping once the remote is in hand.
+
+   Firmware version 0.6.0 -> 0.7.0, Android versionCode 15 -> 16
+   (0.14.0 -> 0.15.0). **Phase H is now fully done** (all 3 parts).
+
+### Phase I (DONE - full write-up in docs/24)
+
+Builder's spec (their words, translated): modern/premium dark-mode UI,
+an "Apple x Tesla" design fusion, the cluster (Dashboard) should read
+like a modern car multimedia system crossed with BMW's cluster (theme
+only - NOT an actual multimedia player to build), should feel like a
+"million-dollar product" on open, use creative judgment, plus the
+builder's own app icon artwork to wire in, plus 2 bugs to fix.
+
+**Done:**
+1. **App icon** - builder's provided artwork processed into a full
+   mipmap set (legacy square/round + adaptive icon foreground/background
+   at all 5 densities), old placeholder vectors deleted.
+2. **Design system refresh** - `Color.kt`'s background deepened to true
+   near-black (`#06070A`), primary accent shifted from neon cyan to a
+   restrained "signal blue" (`#3E8EFF`, Apple/Tesla direction) with a
+   refined indigo secondary (`#8B5CF6`) - same token NAMES kept, so
+   every screen already reading them (all of them) picked up the new
+   palette automatically, no per-screen edits needed. `Type.kt` tightened
+   for a more "instrument readout" feel. `GlassCard` got a top-edge
+   light gradient (real glass catches more light on top). `SpeedGauge`
+   got instrument-cluster tick marks + a monospace digital readout - the
+   concrete BMW-cluster-reference implementation.
+3. **Splash screen** (new) - `androidx.core:core-splashscreen`, real
+   launcher icon on the app's own background instead of a blank flash,
+   custom fade+scale exit - the direct answer to "feels like a
+   million-dollar product when it opens".
+4. **Bug 1 (keyboard covers Signup's lower fields)** - root cause:
+   `enableEdgeToEdge()` means `windowSoftInputMode` alone doesn't push
+   content up anymore; fix is each form screen's own `.imePadding()`.
+   Applied to Signup/Account/Settings/Calculator (every text-field
+   screen), plus the manifest flag as a harmless fallback.
+5. **Bug 2 (menu button drifts off-screen on some sizes)** - root cause:
+   `BikeOSMenuScaffold` had zero status-bar inset handling, so on edge-
+   to-edge it drew right under the status bar, worse on some devices'
+   status bar heights than others. Fixed with real
+   `Modifier.statusBarsPadding()` (reads actual WindowInsets, not a
+   hardcoded offset) - same fix class applied to Onboarding's Skip
+   button/bottom controls and Signup's submit button
+   (`navigationBarsPadding()`), found via the same root-cause search.
+
+**Still NOT done / explicitly out of scope for this pass:**
+- This was a design-SYSTEM refresh (palette/typography/shared
+  components/splash/one hero gauge), not a screen-by-screen visual
+  rebuild - Home/Settings/About/Profile/Calculator's actual layouts are
+  unchanged, they just inherit the new colors/type automatically. More
+  BMW-multimedia-specific treatment of the Dashboard's other widgets
+  (light toggles, mode selector, info cards) is a reasonable follow-up.
+- Not build/runtime-verified - **this pass carries more risk shipping
+  unverified than most others**, since it's almost entirely visual/
+  subjective (contrast, icon rendering across real device mask shapes,
+  splash timing) in a way static brace-balance checks can't catch. Get
+  real device eyes on this before considering it truly finished.
 
 ## Known environment limitation - important context for the new chat
 
@@ -276,7 +352,10 @@ Full detail: `docs/18_WIRING_GUIDE.md`.
 
 ## How to talk to Claude in the new chat
 
-Say something like: *"Continue BikeOS. First finish migrating the 4
-remaining screens to BikeOSMenuScaffold per the handoff doc, then [pick:
-Phase J / Phase H / whatever bug you found]."* Attach the zip so Claude
-reads real code, not just this description.
+All planned phases (F through J, the UI bug-fix pass, and I) are now
+done per this doc - none are build/runtime-verified. Say something like:
+*"Continue BikeOS. I tested it on a real device and found [bug/issue],
+here's what happened: ..."* or *"Continue BikeOS, let's tune
+[HALL_AO_THRESHOLD / the riding-style classifier thresholds / the remote
+keyCode mapping] now that I have real hardware data."* Attach the zip so
+Claude reads real code, not just this description.

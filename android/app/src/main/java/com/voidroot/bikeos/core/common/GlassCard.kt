@@ -23,6 +23,13 @@ import com.voidroot.bikeos.core.theme.LocalClusterPalette
  * layer behind it, which is a much bigger change for a marginal visual
  * gain here. This uses a subtle diagonal gradient fill + soft shadow +
  * thin border instead, which reads as "glass" without that complexity.
+ *
+ * Phase I: added a faint top-edge highlight border on top of the existing
+ * uniform border - real glass/acrylic surfaces catch more light along their
+ * top edge than their bottom, and that asymmetry is what sells "glass"
+ * over "flat card with a border" at a glance (the Apple/Tesla premium
+ * direction this pass asked for leans on exactly this kind of restrained
+ * physical-material cue rather than heavier effects).
  */
 @Composable
 fun GlassCard(
@@ -41,7 +48,13 @@ fun GlassCard(
                 ),
                 shape
             )
-            .border(1.dp, palette.cardBorder, shape)
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(palette.textPrimary.copy(alpha = 0.20f), palette.cardBorder)
+                ),
+                shape = shape
+            )
             .padding(16.dp)
     ) {
         content()
