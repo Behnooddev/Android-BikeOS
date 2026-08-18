@@ -74,6 +74,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // GPS for Phase K hardware-free mode (PhoneSensorSource)
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     // Hilt - dependency injection (Phase 2; ViewModels/Repositories now
     // constructor-injected instead of Phase 0/1's plain default constructors)
     implementation("com.google.dagger:hilt-android:2.51.1")

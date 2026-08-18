@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Speed
@@ -125,6 +126,15 @@ fun SettingsScreen(navController: NavHostController, viewModel: SettingsViewMode
         SettingsSection(title = "Reminders & Security", icon = Icons.Filled.Security) {
             SettingsToggleRow("Ride reminders", "A nudge around your usual ride time if you haven't ridden today", uiState.settings.reminderNotificationsEnabled, viewModel::setReminderNotificationsEnabled)
             SettingsToggleRow("Anti-theft alarm", "Buzzer + blinking lights if the bike is disturbed while armed", uiState.settings.antiTheftAlarmEnabled, viewModel::setAntiTheftAlarmEnabled)
+        }
+
+        SettingsSection(title = "Hardware", icon = Icons.Filled.PhoneAndroid) {
+            SettingsToggleRow(
+                "Hardware-free mode",
+                "Use your phone's GPS and motion sensors instead of connecting to the ESP32 dashboard. Cadence and battery aren't available in this mode - a phone can't measure either.",
+                uiState.settings.hardwareFreeModeEnabled,
+                viewModel::setHardwareFreeModeEnabled
+            )
         }
 
         SettingsSection(title = "Bluetooth Configuration", icon = Icons.Filled.Bluetooth) {

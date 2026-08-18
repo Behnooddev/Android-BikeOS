@@ -40,9 +40,14 @@ private const val CONNECT_TIMEOUT_MS = 8000L
 fun ClusterBootScreen(navController: NavHostController, viewModel: ClusterBootViewModel = hiltViewModel()) {
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val animationEnabled by viewModel.engineAnimationEnabled.collectAsStateWithLifecycle()
+    val hardwareFreeMode by viewModel.hardwareFreeModeEnabled.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var bootPhase by remember { mutableStateOf(BootPhase.CONNECTING) }
+    // Hardware-free mode never waits on a BLE connection, so it starts
+    // straight in ANIMATING - there's nothing to "connect" to at boot.
+    var bootPhase by remember(hardwareFreeMode) {
+        mutableStateOf(if (hardwareFreeMode) BootPhase.ANIMATING else BootPhase.CONNECTING)
+    }
     var showTimeoutFallback by remember { mutableStateOf(false) }
     var showPermissionRationale by remember { mutableStateOf(false) }
 
@@ -56,11 +61,20 @@ fun ClusterBootScreen(navController: NavHostController, viewModel: ClusterBootVi
             arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
-    val permissionLauncher = rememberLauncherForActivityResult(
+    val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         if (results.values.all { it }) viewModel.connect() else showPermissionRationale = true
     }
+
+    // Hardware-free mode: ask for location once, optimistically, but never
+    // block boot on the result - per product decision, the dashboard opens
+    // with speed/distance dashed until the user grants it (see
+    // PhoneSensorSource.noPermissionStream). Denying just means Settings
+    // is where they'll need to go to turn it on later.
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* result intentionally unused - PhoneSensorSource re-checks live */ }
 
     fun goToDashboard() {
         navController.navigate(BikeOSDestinations.DASHBOARD) {
@@ -68,18 +82,29 @@ fun ClusterBootScreen(navController: NavHostController, viewModel: ClusterBootVi
         }
     }
 
-    // Kick off connection attempt once, on entering this screen.
-    LaunchedEffect(Unit) {
-        val alreadyGranted = bluetoothPermissions.all {
-            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    // Kick off connection attempt once, on entering this screen - skipped
+    // entirely in hardware-free mode.
+    LaunchedEffect(hardwareFreeMode) {
+        if (hardwareFreeMode) {
+            val alreadyGranted = ContextCompat.checkSelfPermission(
+                context, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!alreadyGranted) locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            val alreadyGranted = bluetoothPermissions.all {
+                ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+            }
+            if (alreadyGranted) viewModel.connect() else bluetoothPermissionLauncher.launch(bluetoothPermissions)
         }
-        if (alreadyGranted) viewModel.connect() else permissionLauncher.launch(bluetoothPermissions)
     }
 
     // Timeout: stop waiting for a connection after CONNECT_TIMEOUT_MS.
-    LaunchedEffect(Unit) {
-        delay(CONNECT_TIMEOUT_MS)
-        if (connectionState !is BleConnectionState.Connected) showTimeoutFallback = true
+    // N/A in hardware-free mode, which never enters CONNECTING at all.
+    LaunchedEffect(hardwareFreeMode) {
+        if (!hardwareFreeMode) {
+            delay(CONNECT_TIMEOUT_MS)
+            if (connectionState !is BleConnectionState.Connected) showTimeoutFallback = true
+        }
     }
 
     // Once actually connected, move straight into the boot animation phase.

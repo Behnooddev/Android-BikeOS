@@ -119,6 +119,7 @@ fun DashboardScreen(
                 TopStatusRow(
                     isConnected = uiState.isConnected,
                     batteryPercent = uiState.batteryPercent,
+                    sensorSource = uiState.sensorSource,
                     currentTime = uiState.currentTime,
                     onExit = ::exit
                 )
@@ -183,6 +184,7 @@ fun DashboardScreen(
                     distanceKm = uiState.distanceKm,
                     calories = uiState.calories,
                     cadenceRpm = uiState.cadenceRpm,
+                    sensorSource = uiState.sensorSource,
                     frontGear = uiState.frontGear,
                     rearGear = uiState.rearGear,
                     gearSuggestionLabel = uiState.gearSuggestionLabel
@@ -196,6 +198,7 @@ fun DashboardScreen(
 private fun TopStatusRow(
     isConnected: Boolean,
     batteryPercent: Int,
+    sensorSource: com.voidroot.bikeos.data.repository.SensorSourceType,
     currentTime: String,
     onExit: () -> Unit
 ) {
@@ -212,14 +215,22 @@ private fun TopStatusRow(
                         .size(8.dp)
                         .background(if (isConnected) BikeSuccess else BikeDanger, CircleShape)
                 )
+                val statusText = when {
+                    !isConnected -> "  Disconnected"
+                    sensorSource == com.voidroot.bikeos.data.repository.SensorSourceType.PHONE -> "  Phone GPS"
+                    else -> "  Connected"
+                }
                 Text(
-                    text = if (isConnected) "  Connected" else "  Disconnected",
+                    text = statusText,
                     style = MaterialTheme.typography.labelSmall,
                     color = palette.textSecondary
                 )
             }
         }
-        GlassCard { Text("$batteryPercent%", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary) }
+        GlassCard {
+            val batteryText = if (sensorSource == com.voidroot.bikeos.data.repository.SensorSourceType.PHONE) "--" else "$batteryPercent%"
+            Text(batteryText, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
+        }
         GlassCard { Text(currentTime, style = MaterialTheme.typography.labelSmall, color = palette.textSecondary) }
         // Top-right (landscape) - exits the cluster, saving the ride.
         // Riders with gloves/mounted phones need a visible tap target,
@@ -236,6 +247,7 @@ private fun BottomInfoRow(
     distanceKm: Float,
     calories: Int,
     cadenceRpm: Int,
+    sensorSource: com.voidroot.bikeos.data.repository.SensorSourceType,
     frontGear: Int,
     rearGear: Int,
     gearSuggestionLabel: String
@@ -269,7 +281,8 @@ private fun BottomInfoRow(
             GlassCard {
                 Column {
                     Text("Cadence", style = MaterialTheme.typography.labelSmall, color = palette.textSecondary)
-                    Text("$cadenceRpm rpm", style = MaterialTheme.typography.titleMedium, color = palette.textPrimary)
+                    val cadenceText = if (sensorSource == com.voidroot.bikeos.data.repository.SensorSourceType.PHONE) "-- rpm" else "$cadenceRpm rpm"
+                    Text(cadenceText, style = MaterialTheme.typography.titleMedium, color = palette.textPrimary)
                 }
             }
         }

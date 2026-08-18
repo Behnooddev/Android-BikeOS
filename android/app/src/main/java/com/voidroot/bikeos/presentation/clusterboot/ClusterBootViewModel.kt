@@ -24,6 +24,11 @@ class ClusterBootViewModel @Inject constructor(
         .map { it.engineStartAnimationEnabled }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    /** Phase K: when true, boot skips the BLE connect dance entirely - see ClusterBootScreen. */
+    val hardwareFreeModeEnabled: StateFlow<Boolean> = settingsRepository.observe()
+        .map { it.hardwareFreeModeEnabled }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun connect() {
         if (connectionState.value !is BleConnectionState.Connected) {
             bleRepository.connect()

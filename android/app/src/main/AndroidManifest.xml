@@ -4,17 +4,21 @@
 
     <!-- BLE permissions.
          neverForLocation on BLUETOOTH_SCAN: BikeOS never derives physical
-         location from scan results, so on API 31+ we don't need the
-         ACCESS_FINE_LOCATION permission that scanning would otherwise imply.
-         ACCESS_FINE_LOCATION is still declared (maxSdkVersion 30) because
-         BLE scanning on API <31 requires it regardless. -->
+         location from scan results, so BLE scanning itself doesn't need
+         ACCESS_FINE_LOCATION on API 31+. ACCESS_FINE_LOCATION is declared
+         below unconditionally (no maxSdkVersion cap) anyway, because
+         Phase K's hardware-free mode uses real GPS via
+         FusedLocationProviderClient regardless of API level. -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
+
+    <!-- Real GPS for Phase K hardware-free mode (PhoneSensorSource), not
+         just implied by BLE scan - requested at runtime from Settings/
+         ClusterBoot, never assumed granted. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <!-- Normal permission (no runtime prompt) - haptic feedback for the
          engine-start boot animation. -->

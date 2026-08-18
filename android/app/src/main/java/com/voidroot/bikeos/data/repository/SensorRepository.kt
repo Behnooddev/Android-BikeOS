@@ -1,24 +1,23 @@
 package com.voidroot.bikeos.data.repository
 
-import com.voidroot.bikeos.data.ble.BleConnectionState
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.inject.Inject
-import kotlin.math.PI
 
 /**
  * What the Dashboard actually renders. Per the hard product rule "the
- * cluster must never show fake data": every field here is either real BLE
- * telemetry or a real system value (the clock) - there is no simulated
- * generator anymore. While disconnected, every sensor field is exactly 0
- * and [isConnected] is false; the UI is responsible for rendering that
- * honestly (dashed/greyed out), not for hiding the zeros.
+ * cluster must never show fake data": every field here is either real
+ * telemetry from an active [source] or a real system value (the clock) -
+ * there is no simulated generator. While disconnected, every sensor field
+ * is exactly 0 and [isConnected] is false; the UI is responsible for
+ * rendering that honestly (dashed/greyed out), not for hiding the zeros.
+ *
+ * Phase K: [source] tells the UI *which* fields are honestly absent vs.
+ * just currently zero. [SensorSourceType.PHONE] never populates
+ * [cadenceRpm] or [batteryPercent] - not "currently 0", but structurally
+ * unavailable - so the UI must render those two as a permanent dash
+ * whenever `source == PHONE`, the same way it dashes everything when
+ * `isConnected == false`.
  */
 data class SensorSnapshot(
     val speedKmh: Float = 0f,
@@ -28,71 +27,28 @@ data class SensorSnapshot(
     val batteryPercent: Int = 0,
     val isConnected: Boolean = false,
     val currentTime: String = "--:--",
-    /** MPU6050 accel magnitude in g (~1.0g at rest). 0f while disconnected - same "0 = no data" convention as every other field here (0g is not a physically real at-rest reading, so it's an unambiguous sentinel). Protocol 1.2 / Phase H. */
-    val accelG: Float = 0f
+    /** MPU6050 (ESP32) or phone accelerometer magnitude in g (~1.0g at rest). 0f while disconnected. Protocol 1.2 / Phase H, extended to phone in Phase K. */
+    val accelG: Float = 0f,
+    val source: SensorSourceType = SensorSourceType.NONE
 )
 
 /**
- * Speed/distance conversion lives HERE, not in the firmware: the ESP32
- * reports raw wheel RPM (see [com.voidroot.bikeos.data.ble.SensorPayload]
- * kdoc), and this class turns that into km/h and accumulated km using the
- * wheel size from [BikeRepository].
+ * Orchestrates between [BleSensorSource] (ESP32 hardware) and
+ * [PhoneSensorSource] (Phase K hardware-free mode), switching live off
+ * [AppSettings.hardwareFreeModeEnabled] - per product decision, switching
+ * mid-ride is allowed, so this re-subscribes immediately on toggle rather
+ * than requiring a restart.
  */
 class SensorRepository @Inject constructor(
-    private val bleRepository: BleRepository,
-    private val bikeRepository: BikeRepository
+    private val bleSensorSource: BleSensorSource,
+    private val phoneSensorSource: PhoneSensorSource,
+    private val settingsRepository: SettingsRepository
 ) {
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-    fun stream(): Flow<SensorSnapshot> = bleRepository.connectionState.flatMapLatest { state ->
-        if (state is BleConnectionState.Connected) {
-            realBleStream()
+    fun stream(): Flow<SensorSnapshot> = settingsRepository.observe().flatMapLatest { settings ->
+        if (settings.hardwareFreeModeEnabled) {
+            phoneSensorSource.stream()
         } else {
-            disconnectedClockStream()
-        }
-    }
-
-    /** Not fake sensor data - just a real, ticking clock so the clock widget doesn't freeze while disconnected. */
-    private fun disconnectedClockStream(): Flow<SensorSnapshot> = flow {
-        while (true) {
-            emit(SensorSnapshot(currentTime = timeFormat.format(Date()), isConnected = false))
-            delay(1000)
-        }
-    }
-
-    private fun realBleStream(): Flow<SensorSnapshot> {
-        // Scoped to this flow's collection: reset every time the BLE
-        // connection (re)becomes Connected, since flatMapLatest cancels
-        // and recreates this flow on every upstream connectionState change.
-        var cumulativeDistanceKm = 0f
-        var lastEmitEpochMs = 0L
-
-        return combine(bleRepository.sensorData, bikeRepository.observe()) { payload, bike ->
-            val wheelCircumferenceMeters = (bike.wheelSizeInches * 0.0254f) * PI.toFloat()
-            val speedKmh = payload.wheelRpm * wheelCircumferenceMeters * 60f / 1000f
-
-            val now = System.currentTimeMillis()
-            if (lastEmitEpochMs != 0L) {
-                val hoursElapsed = (now - lastEmitEpochMs) / 3_600_000f
-                cumulativeDistanceKm += speedKmh * hoursElapsed
-            }
-            lastEmitEpochMs = now
-
-            SensorSnapshot(
-                speedKmh = speedKmh,
-                distanceKm = cumulativeDistanceKm,
-                // Calories are computed on the Android side (rider-weight
-                // dependent), not by the firmware - real per-rider calorie
-                // calculation is a follow-up (MET-based formula against
-                // UserRepository's weight), kept at 0 for now rather than
-                // showing a fabricated number.
-                calories = 0,
-                cadenceRpm = payload.cadenceRpm,
-                batteryPercent = payload.batteryPercent,
-                isConnected = true,
-                currentTime = timeFormat.format(Date()),
-                accelG = payload.accelG
-            )
+            bleSensorSource.stream()
         }
     }
 }

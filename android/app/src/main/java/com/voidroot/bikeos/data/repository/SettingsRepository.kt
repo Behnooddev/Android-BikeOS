@@ -15,19 +15,20 @@ data class AppSettings(
     val gearSuggestionsEnabled: Boolean = true,
     val antiTheftAlarmEnabled: Boolean = false,
     val reminderNotificationsEnabled: Boolean = true,
-    val engineStartAnimationEnabled: Boolean = true
+    val engineStartAnimationEnabled: Boolean = true,
+    val hardwareFreeModeEnabled: Boolean = false
 )
 
 private fun SettingsEntity.toDomain() = AppSettings(
     useMetricUnits, soundEnabled, maxSpeedAlertKmh, isDarkTheme, use24HourClock,
     gearSuggestionsEnabled, antiTheftAlarmEnabled, reminderNotificationsEnabled,
-    engineStartAnimationEnabled
+    engineStartAnimationEnabled, hardwareFreeModeEnabled
 )
 
 private fun AppSettings.toEntity() = SettingsEntity(
     0, useMetricUnits, soundEnabled, maxSpeedAlertKmh, isDarkTheme, use24HourClock,
     gearSuggestionsEnabled, antiTheftAlarmEnabled, reminderNotificationsEnabled,
-    engineStartAnimationEnabled
+    engineStartAnimationEnabled, hardwareFreeModeEnabled
 )
 
 class SettingsRepository @Inject constructor(

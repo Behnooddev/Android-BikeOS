@@ -253,6 +253,7 @@ class DashboardViewModel @Inject constructor(
                     cadenceRpm = snapshot.cadenceRpm,
                     batteryPercent = snapshot.batteryPercent,
                     isConnected = snapshot.isConnected,
+                    sensorSource = snapshot.source,
                     frontGear = bike.currentFrontGear,
                     rearGear = bike.currentRearGear,
                     rideMode = mode,

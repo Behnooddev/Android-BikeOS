@@ -102,6 +102,17 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+/**
+ * Phase K: adds the hardware-free mode toggle to the single-row settings
+ * table. Defaults to false (hardware/ESP32 mode) for every existing user -
+ * nobody gets silently switched into phone-sensor mode by an update.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE settings ADD COLUMN hardwareFreeModeEnabled INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 @Database(
     entities = [
         UserProfileEntity::class,
@@ -112,7 +123,7 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         AppStateEntity::class,
         ThemeColorsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class BikeOSDatabase : RoomDatabase() {

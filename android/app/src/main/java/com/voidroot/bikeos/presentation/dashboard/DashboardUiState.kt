@@ -1,10 +1,18 @@
 package com.voidroot.bikeos.presentation.dashboard
 
+import com.voidroot.bikeos.data.repository.SensorSourceType
+
 /**
  * Everything the Dashboard screen needs to render one frame.
  * Sensor fields come from [com.voidroot.bikeos.data.repository.SensorRepository]
- * - real BLE data when connected, honest zeros + isConnected=false when
+ * - real telemetry when connected, honest zeros + isConnected=false when
  * not (see that class's kdoc: the cluster never shows fake data).
+ *
+ * [sensorSource] (Phase K) tells widgets whether the current snapshot came
+ * from the ESP32 or the phone - [cadenceRpm] and [batteryPercent] are
+ * structurally unavailable when `sensorSource == SensorSourceType.PHONE`
+ * (not "currently 0"), so those widgets must render a permanent dash in
+ * that case rather than "0".
  *
  * [frontGear]/[rearGear] come from Room (via BikeRepository), and
  * [enabledWidgetKeys] drives which bottom-row cards the Dashboard actually
@@ -18,6 +26,7 @@ data class DashboardUiState(
     val cadenceRpm: Int = 0,
     val batteryPercent: Int = 0,
     val isConnected: Boolean = false,
+    val sensorSource: SensorSourceType = SensorSourceType.NONE,
     val frontGear: Int = 1,
     val rearGear: Int = 1,
     val rideMode: RideMode = RideMode.CRUISE,

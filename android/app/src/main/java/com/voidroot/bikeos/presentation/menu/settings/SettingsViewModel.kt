@@ -92,6 +92,17 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepository.update { it.copy(engineStartAnimationEnabled = enabled) } }
     }
 
+    /**
+     * Phase K toggle. Deliberately does NOT request the location permission
+     * itself - permission is checked/requested from wherever the dashboard
+     * actually starts consuming PhoneSensorSource (ClusterBoot/Dashboard),
+     * since the toggle can be flipped mid-ride and the screen holding this
+     * ViewModel may not be the one on screen when that happens.
+     */
+    fun setHardwareFreeModeEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.update { it.copy(hardwareFreeModeEnabled = enabled) } }
+    }
+
     fun saveBikeConfig(bike: BikeProfile) {
         viewModelScope.launch { bikeRepository.save(bike) }
     }

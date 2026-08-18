@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.voidroot.bikeos.data.local.BikeOSDatabase
 import com.voidroot.bikeos.data.local.MIGRATION_1_2
 import com.voidroot.bikeos.data.local.MIGRATION_2_3
+import com.voidroot.bikeos.data.local.MIGRATION_3_4
 import com.voidroot.bikeos.data.local.dao.AppStateDao
 import com.voidroot.bikeos.data.local.dao.BikeProfileDao
 import com.voidroot.bikeos.data.local.dao.DashboardWidgetDao
@@ -35,7 +36,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): BikeOSDatabase =
         Room.databaseBuilder(context, BikeOSDatabase::class.java, BikeOSDatabase.DATABASE_NAME)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
     @Provides

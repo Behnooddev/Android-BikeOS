@@ -15,5 +15,8 @@ data class SettingsEntity(
     val gearSuggestionsEnabled: Boolean = true,
     val antiTheftAlarmEnabled: Boolean = false,
     val reminderNotificationsEnabled: Boolean = true,
-    val engineStartAnimationEnabled: Boolean = true
+    val engineStartAnimationEnabled: Boolean = true,
+    // Phase K: drive the dashboard from phone GPS/accelerometer instead of
+    // the ESP32. Switchable mid-ride - SensorRepository re-subscribes live.
+    val hardwareFreeModeEnabled: Boolean = false
 )
